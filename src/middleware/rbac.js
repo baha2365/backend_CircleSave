@@ -1,48 +1,48 @@
-const jwt = require('jsonwebtoken');
-const env = require('../config/env');
 const ApiError = require('../utils/ApiError');
-const asyncHandler = require('../utils/asyncHandler');
-const { prisma } = require('../config/database');
 
 /**
- * Verify Bearer JWT access token.
- * Attaches decoded user payload to req.user.
+ * Factory: require that req.user has one of the specified roles.
+ * Must be used AFTER authenticate middleware.
+ *
+ * Usage:
+ *   router.get('/admin/users', authenticate, requireRole('ADMIN'), handler)
+ *   router.post('/circles', authenticate, requireRole('ORGANIZER', 'ADMIN'), handler)
+ *
+ * @param {...string} roles - Allowed role(s)
  */
-const authenticate = asyncHandler(async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw ApiError.unauthorized('Authentication required. Provide a Bearer token.', 'AUTH_MISSING_TOKEN');
+const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return next(ApiError.unauthorized('Authentication required.', 'AUTH_MISSING'));
   }
 
-  const token = authHeader.split(' ')[1];
-
-  let decoded;
-  try {
-    decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-  } catch (err) {
-    if (err.name === 'TokenExpiredError') {
-      throw ApiError.unauthorized('Access token expired. Please refresh.', 'AUTH_TOKEN_EXPIRED');
-    }
-    throw ApiError.unauthorized('Invalid access token.', 'AUTH_INVALID_TOKEN');
+  if (!roles.includes(req.user.role)) {
+    return next(
+      ApiError.forbidden(
+        `Access denied. Required role(s): ${roles.join(', ')}. Your role: ${req.user.role}`,
+        'RBAC_INSUFFICIENT_ROLE'
+      )
+    );
   }
 
-  // Verify user still exists and is active
-  const user = await prisma.user.findUnique({
-    where: { id: decoded.sub },
-    select: { id: true, email: true, username: true, role: true, isActive: true, isBanned: true },
-  });
-
-  if (!user) {
-    throw ApiError.unauthorized('User not found.', 'AUTH_USER_NOT_FOUND');
-  }
-
-  if (!user.isActive || user.isBanned) {
-    throw ApiError.forbidden('Account is suspended or banned.', 'AUTH_ACCOUNT_SUSPENDED');
-  }
-
-  req.user = user;
   next();
-});
+};
 
-module.exports = { authenticate };
+/**
+ * Require that the authenticated user owns a resource OR has admin role.
+ * @param {string} ownerIdField - Field name in req.params or req.body containing owner's userId
+ */
+const requireOwnerOrAdmin = (getOwnerId) => (req, res, next) => {
+  if (!req.user) {
+    return next(ApiError.unauthorized('Authentication required.', 'AUTH_MISSING'));
+  }
+
+  const ownerId = typeof getOwnerId === 'function' ? getOwnerId(req) : req.params[getOwnerId];
+
+  if (req.user.role === 'ADMIN' || req.user.id === ownerId) {
+    return next();
+  }
+
+  next(ApiError.forbidden('You do not have permission to access this resource.', 'RBAC_NOT_OWNER'));
+};
+
+module.exports = { requireRole, requireOwnerOrAdmin };
