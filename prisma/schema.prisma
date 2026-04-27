@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////
+
+enum Role {
+  MEMBER
+  ORGANIZER
+  ADMIN
+}
+
+//////////////////////////////////////////////////
+// USER
+//////////////////////////////////////////////////
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+
+  role          Role     @default(MEMBER)
+
+  trustScore    Float    @default(100)
+
+  isActive      Boolean  @default(true)
+  isBanned      Boolean  @default(false)
+  bannedReason  String?
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+//////////////////////////////////////////////////
+// REFRESH TOKENS
+//////////////////////////////////////////////////
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String
+
+  tokenHash   String
+  expiresAt   DateTime
+
+  revoked     Boolean  @default(false)
+  revokedAt   DateTime?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+//////////////////////////////////////////////////
+// AUDIT LOGS
+//////////////////////////////////////////////////
+
+model AuditLog {
+  id          String   @id @default(uuid())
+
+  userId      String?
+  action      String
+  entity      String
+  entityId    String
+
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity])
+}
