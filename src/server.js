@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+
 const app = require('./app');
 const env = require('./config/env');
 const { disconnectDatabase } = require('./config/database');

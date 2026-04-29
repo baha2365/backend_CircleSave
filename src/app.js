@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./docs/swagger.json'); // path to your swagger file
+
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -65,6 +68,8 @@ app.use(`/api/${env.API_VERSION}/circles`, circleRouter);
 app.use(`/api/${env.API_VERSION}/payments`, paymentRouter);
 app.use(`/api/${env.API_VERSION}/admin`, adminRouter);
 */
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 // 404 handler
