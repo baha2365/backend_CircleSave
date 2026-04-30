@@ -4,9 +4,17 @@ const app = require('./app');
 const env = require('./config/env');
 const { disconnectDatabase } = require('./config/database');
 
-const server = app.listen(env.PORT, () => {
-  console.log(`Server running on port ${env.PORT}`);
-});
+const { connectRedis } = require('./config/redis');
+
+let server;
+
+(async () => {
+  await connectRedis();
+
+  server = app.listen(env.PORT, () => {
+    console.log(`Server running on port ${env.PORT}`);
+  });
+})();
 
 
 // Graceful shutdown

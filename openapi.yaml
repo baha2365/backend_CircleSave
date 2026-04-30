@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: CircleSave API
   version: 1.0.0
-  description: API documentation for CircleSave backend (Auth + Users + System)
+  description: Full API documentation for CircleSave (Auth system)
 
 servers:
   - url: http://localhost:3000/api/v1
@@ -11,18 +11,15 @@ servers:
 tags:
   - name: Auth
     description: Authentication endpoints
-  - name: Users
-    description: User management
   - name: Health
-    description: System health checks
+    description: System health
 
 paths:
 
   # ===================== HEALTH =====================
   /health:
     get:
-      tags:
-        - Health
+      tags: [Health]
       summary: Check server health
       responses:
         "200":
@@ -30,98 +27,206 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: ok
+                $ref: '#/components/schemas/SuccessMessage'
 
   # ===================== AUTH =====================
 
   /auth/register:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: Register new user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - email
-                - password
-              properties:
-                email:
-                  type: string
-                  example: test@gmail.com
-                password:
-                  type: string
-                  example: 12345678
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
         "201":
-          description: User created successfully
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
 
   /auth/login:
     post:
-      tags:
-        - Auth
+      tags: [Auth]
       summary: Login user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - email
-                - password
-              properties:
-                email:
-                  type: string
-                  example: test@gmail.com
-                password:
-                  type: string
-                  example: 12345678
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         "200":
           description: Login successful
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  accessToken:
-                    type: string
-                  refreshToken:
-                    type: string
+                $ref: '#/components/schemas/LoginResponse'
 
-  # ===================== USERS =====================
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        "200":
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
 
-  /users/me:
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /auth/me:
     get:
-      tags:
-        - Users
-      summary: Get current user profile
+      tags: [Auth]
+      summary: Get current user
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Current user data
+          description: Current user info
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  email:
-                    type: string
+                $ref: '#/components/schemas/UserResponse'
+
+# ===================== COMPONENTS =====================
 
 components:
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  schemas:
+
+    # ---------- REQUESTS ----------
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          example: testuser
+        email:
+          type: string
+          example: test@mail.com
+        password:
+          type: string
+          example: Password123
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: test@mail.com
+        password:
+          type: string
+          example: Password123
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    # ---------- RESPONSES ----------
+
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Success
+
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [MEMBER, ORGANIZER, ADMIN]
+        trustScore:
+          type: number

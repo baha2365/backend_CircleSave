@@ -33,6 +33,12 @@ function generateAccessToken(user) {
   );
 }
 
+const crypto = require('crypto');
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 function generateRefreshToken(user) {
   return jwt.sign(
     {
@@ -133,13 +139,15 @@ async function login({ email, password }, ip) {
   const refreshToken = generateRefreshToken(user);
 
   // Persist refresh token
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      token: refreshToken,
-      expiresAt: getRefreshTokenExpiry(),
-    },
-  });
+
+
+await prisma.refreshToken.create({
+  data: {
+    userId: user.id,
+    tokenHash: hashToken(refreshToken),
+    expiresAt: getRefreshTokenExpiry(),
+  },
+});
 
   // Audit log
   await prisma.auditLog.create({
@@ -174,16 +182,16 @@ async function refreshTokens(refreshToken) {
   const decoded = verifyRefreshToken(refreshToken);
 
   const storedToken = await prisma.refreshToken.findUnique({
-    where: { token: refreshToken },
+    where: { tokenHash: hashToken(refreshToken) },
     include: { user: { select: { id: true, email: true, username: true, role: true, isActive: true, isBanned: true } } },
   });
 
-  if (!storedToken || storedToken.isRevoked) {
+  if (!storedToken || storedToken.revoked) {
     throw ApiError.unauthorized('Refresh token is invalid or has been revoked.', 'AUTH_REFRESH_REVOKED');
   }
 
   if (storedToken.expiresAt < new Date()) {
-    await prisma.refreshToken.update({ where: { id: storedToken.id }, data: { isRevoked: true } });
+    await prisma.refreshToken.update({ where: { id: storedToken.id }, data: { revoked: true, revokedAt: new Date() } });
     throw ApiError.unauthorized('Refresh token expired. Please log in again.', 'AUTH_REFRESH_EXPIRED');
   }
 
@@ -196,14 +204,14 @@ async function refreshTokens(refreshToken) {
   const newRefreshToken = generateRefreshToken(storedToken.user);
 
   await prisma.$transaction([
-    prisma.refreshToken.update({ where: { id: storedToken.id }, data: { isRevoked: true } }),
+    prisma.refreshToken.update({ where: { id: storedToken.id }, data: { revoked: true, revokedAt: new Date() } }),
     prisma.refreshToken.create({
       data: {
         userId: storedToken.user.id,
-        token: newRefreshToken,
+        tokenHash: hashToken(newRefreshToken),
         expiresAt: getRefreshTokenExpiry(),
       },
-    }),
+    })
   ]);
 
   return { accessToken: newAccessToken, refreshToken: newRefreshToken };
@@ -217,13 +225,16 @@ async function logout(refreshToken, userId) {
   }
 
   const token = await prisma.refreshToken.findFirst({
-    where: { token: refreshToken, userId },
+    where: {
+      tokenHash: hashToken(refreshToken),
+      userId
+    }
   });
 
   if (token) {
     await prisma.refreshToken.update({
       where: { id: token.id },
-      data: { isRevoked: true },
+      data: { revoked: true, revokedAt: new Date() },
     });
   }
 
@@ -243,8 +254,8 @@ async function logout(refreshToken, userId) {
 
 async function logoutAll(userId) {
   await prisma.refreshToken.updateMany({
-    where: { userId, isRevoked: false },
-    data: { isRevoked: true },
+    where: { userId, revoked: false },
+    data: { revoked: true, revokedAt: new Date() },
   });
   logger.info('User logged out all sessions', { userId });
 }

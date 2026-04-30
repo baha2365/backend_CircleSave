@@ -59,7 +59,7 @@ model RefreshToken {
   id          String   @id @default(uuid())
   userId      String
 
-  tokenHash   String
+  tokenHash String @unique
   expiresAt   DateTime
 
   revoked     Boolean  @default(false)
@@ -79,14 +79,12 @@ model RefreshToken {
 
 model AuditLog {
   id          String   @id @default(uuid())
-
   userId      String?
   action      String
   entity      String
   entityId    String
-
+  ip          String?   // ← ADD THIS
   metadata    Json?
-
   createdAt   DateTime @default(now())
 
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)

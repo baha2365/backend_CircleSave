@@ -3,12 +3,12 @@ const { z } = require('zod');
 // ── Auth Schemas ──────────────────────────────────────────────────────────────
 
 const registerSchema = z.object({
-  name: z
-    .string({ required_error: 'Name is required' })
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must be at most 100 characters')
+  username: z
+    .string({ required_error: 'Username is required' })
+    .min(2, 'Username must be at least 2 characters')
+    .max(100, 'Username must be at most 100 characters')
     .trim(),
-
+  
   email: z
     .string({ required_error: 'Email is required' })
     .email('Invalid email address')
@@ -55,10 +55,10 @@ const logoutSchema = z.object({
 
 const updateMeSchema = z
   .object({
-    name: z
+    username: z
       .string()
-      .min(2, 'Name must be at least 2 characters')
-      .max(100, 'Name must be at most 100 characters')
+      .min(2, 'Username must be at least 2 characters')
+      .max(100, 'Username must be at most 100 characters')
       .trim()
       .optional(),
 
