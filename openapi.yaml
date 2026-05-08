@@ -2,63 +2,100 @@ openapi: 3.0.3
 info:
   title: CircleSave API
   version: 1.0.0
-  description: Full API documentation for CircleSave (Auth system)
+  description: |
+    CircleSave — Digital ROSCA (Rotating Savings & Credit Association)
+    
+    ## Authentication
+    All protected endpoints require a `Bearer` JWT token in the `Authorization` header.
+    Obtain tokens via `POST /auth/login`.
 
 servers:
   - url: http://localhost:3000/api/v1
-    description: Local server
+    description: Local development server
 
 tags:
-  - name: Auth
-    description: Authentication endpoints
   - name: Health
-    description: System health
+    description: System health check
+  - name: Auth
+    description: Registration, login, token management
+  - name: Users
+    description: User profile and notifications
+  - name: Circles
+    description: ROSCA circle lifecycle management
+  - name: Rotation
+    description: Payout rotation and emergency swaps
+  - name: Payments
+    description: Contribution payments
+  - name: Ledger
+    description: Double-entry ledger (read-only for members)
+  - name: Admin
+    description: Admin-only operations (ADMIN role required)
 
+# ═══════════════════════════════════════════════════════════════════════════════
 paths:
 
-  # ===================== HEALTH =====================
+  # ── HEALTH ──────────────────────────────────────────────────────────────────
   /health:
     get:
       tags: [Health]
-      summary: Check server health
+      summary: Server health check
       responses:
         "200":
           description: Server is running
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessMessage'
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                success: true
+                message: CircleSave API is running
+                version: v1
+                environment: development
 
-  # ===================== AUTH =====================
-
+  # ── AUTH ─────────────────────────────────────────────────────────────────────
   /auth/register:
     post:
       tags: [Auth]
-      summary: Register new user
+      summary: Register a new user
+      description: Creates a new MEMBER account. Email and username must be unique. Password must be 8+ chars with uppercase, lowercase, and a digit.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/RegisterRequest'
+            example:
+              username: alice_saves
+              email: alice@example.com
+              password: Secure123
       responses:
         "201":
-          description: User registered
+          description: User registered successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
+                $ref: '#/components/schemas/UserEnvelope'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/login:
     post:
       tags: [Auth]
-      summary: Login user
+      summary: Login and obtain JWT tokens
+      description: Returns an access token (15m) and a refresh token (7d).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: alice@example.com
+              password: Secure123
       responses:
         "200":
           description: Login successful
@@ -66,11 +103,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/refresh:
     post:
       tags: [Auth]
       summary: Refresh access token
+      description: Exchange a valid refresh token for a new access token. The old refresh token is rotated (revoked and replaced).
       requestBody:
         required: true
         content:
@@ -79,16 +123,18 @@ paths:
               $ref: '#/components/schemas/RefreshRequest'
       responses:
         "200":
-          description: Tokens refreshed
+          description: New tokens issued
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                $ref: '#/components/schemas/TokenEnvelope'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Logout user
+      summary: Logout (revoke refresh token)
       security:
         - bearerAuth: []
       requestBody:
@@ -99,16 +145,34 @@ paths:
               $ref: '#/components/schemas/RefreshRequest'
       responses:
         "200":
-          description: Logout successful
+          description: Logged out successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessMessage'
+                $ref: '#/components/schemas/MessageResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Revoke all sessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All sessions revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/me:
     get:
       tags: [Auth]
-      summary: Get current user
+      summary: Get current authenticated user
       security:
         - bearerAuth: []
       responses:
@@ -117,10 +181,754 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
+                $ref: '#/components/schemas/UserEnvelope'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
 
-# ===================== COMPONENTS =====================
+  # ── USERS ────────────────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get my profile (with trust tier)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileEnvelope'
+    patch:
+      tags: [Users]
+      summary: Update my profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeRequest'
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
 
+  /users/me/trust-history:
+    get:
+      tags: [Users]
+      summary: Get my trust score history (cursor-paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        "200":
+          description: Trust event history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTrustEvents'
+
+  /users/me/notifications:
+    get:
+      tags: [Users]
+      summary: Get my notifications (cursor-paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: unreadOnly
+          in: query
+          schema:
+            type: string
+            enum: [true, false]
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /users/me/notifications/read-all:
+    patch:
+      tags: [Users]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications marked read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /users/me/payments:
+    get:
+      tags: [Users]
+      summary: Get my payment history (cursor-paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: circleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, COMPLETED, FAILED, PARTIAL, REFUNDED]
+      responses:
+        "200":
+          description: Payment history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  # ── CIRCLES ──────────────────────────────────────────────────────────────────
+  /circles:
+    post:
+      tags: [Circles]
+      summary: Create a new circle (ORGANIZER or ADMIN only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCircleRequest'
+            example:
+              name: Family Savings Group
+              description: Monthly savings circle for family members
+              contributionAmount: 100
+              currency: USD
+              maxMembers: 6
+              frequencyDays: 30
+      responses:
+        "201":
+          description: Circle created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircleEnvelope'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+
+    get:
+      tags: [Circles]
+      summary: List my circles (cursor-paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        "200":
+          description: My circles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /circles/join:
+    post:
+      tags: [Circles]
+      summary: Request to join a circle via invite code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinCircleRequest'
+            example:
+              inviteCode: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "201":
+          description: Join request submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /circles/{id}:
+    get:
+      tags: [Circles]
+      summary: Get circle details (members only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        "200":
+          description: Circle details with members and rotation slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircleEnvelope'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /circles/{id}/activate:
+    post:
+      tags: [Circles]
+      summary: Activate circle and assign rotation order (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                  format: date-time
+                  example: "2025-01-01T00:00:00.000Z"
+      responses:
+        "200":
+          description: Circle activated, rotation assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircleEnvelope'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /circles/{id}/dissolve:
+    post:
+      tags: [Circles]
+      summary: Dissolve circle (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        "200":
+          description: Circle dissolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /circles/{id}/members/{memberId}/approve:
+    patch:
+      tags: [Circles]
+      summary: Approve a pending member (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Member approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /circles/{id}/members/{memberId}/reject:
+    patch:
+      tags: [Circles]
+      summary: Reject a pending member (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Member rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  # ── ROTATION ─────────────────────────────────────────────────────────────────
+  /circles/{circleId}/rotation:
+    get:
+      tags: [Rotation]
+      summary: Get full rotation schedule
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+      responses:
+        "200":
+          description: Rotation slots with recipient info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotationResponse'
+
+  /circles/{circleId}/rotation/swap:
+    post:
+      tags: [Rotation]
+      summary: Request emergency position swap
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSwapRequest'
+            example:
+              requestedPosition: 2
+              reason: Medical emergency — need payout sooner
+      responses:
+        "201":
+          description: Swap request submitted for organizer approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /circles/{circleId}/rotation/swaps:
+    get:
+      tags: [Rotation]
+      summary: List all swap requests for this circle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+      responses:
+        "200":
+          description: Swap requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /circles/{circleId}/rotation/swaps/{swapId}/approve:
+    patch:
+      tags: [Rotation]
+      summary: Approve a swap request (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+        - name: swapId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Swap approved, positions exchanged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /circles/{circleId}/rotation/swaps/{swapId}/reject:
+    patch:
+      tags: [Rotation]
+      summary: Reject a swap request (ORGANIZER/ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+        - name: swapId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Swap rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /circles/{circleId}/payout:
+    post:
+      tags: [Rotation]
+      summary: Release payout to current round recipient (ORGANIZER/ADMIN)
+      description: |
+        Releases the pooled contributions to the member scheduled for the current round.
+        Records a double-entry ledger entry atomically. Advances the circle to the next round.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleasePayoutRequest'
+            example:
+              memberId: "550e8400-e29b-41d4-a716-446655440001"
+              notes: "Round 1 payout — all members paid in full"
+      responses:
+        "200":
+          description: Payout released, ledger updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  # ── PAYMENTS ─────────────────────────────────────────────────────────────────
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Submit a contribution payment
+      description: |
+        Supports full and partial payments. Partial payments enter a state machine
+        (PARTIAL status) with late fee accrual until completed.
+        
+        Provide `Idempotency-Key` header to safely retry without double-charging.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          description: Unique key to prevent duplicate payments on retry
+          schema:
+            type: string
+            example: "pay-alice-circle-123-round-1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitPaymentRequest'
+            example:
+              circleId: "550e8400-e29b-41d4-a716-446655440000"
+              amount: 100
+              currency: USD
+              paymentMethod: BANK_TRANSFER
+              reference: "TXN-2024-001"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentEnvelope'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/ValidationError'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ── LEDGER ───────────────────────────────────────────────────────────────────
+  /circles/{circleId}/ledger:
+    get:
+      tags: [Ledger]
+      summary: Get circle ledger (cursor-paginated, immutable)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: type
+          in: query
+          description: Filter by entry type
+          schema:
+            type: string
+            enum: [CONTRIBUTION, PAYOUT, LATE_FEE, PLATFORM_FEE, REFUND, ADJUSTMENT]
+      responses:
+        "200":
+          description: Ledger entries (debit === credit enforced)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /circles/{circleId}/ledger/verify:
+    get:
+      tags: [Ledger]
+      summary: Verify ledger integrity (ADMIN only)
+      description: Checks that every entry has debitAmount === creditAmount and running balance is consistent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerVerifyResponse'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /circles/{circleId}/payments:
+    get:
+      tags: [Payments]
+      summary: Get all payments for a circle (cursor-paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/circleId'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: round
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, COMPLETED, FAILED, PARTIAL, REFUNDED]
+      responses:
+        "200":
+          description: Circle payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  # ── ADMIN ────────────────────────────────────────────────────────────────────
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Platform statistics dashboard (ADMIN)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [MEMBER, ORGANIZER, ADMIN]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user details (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        "200":
+          description: User details with memberships and trust events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+
+  /admin/users/{id}/ban:
+    patch:
+      tags: [Admin]
+      summary: Ban a user (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 5
+                  example: "Repeated payment defaults and fraudulent activity"
+      responses:
+        "200":
+          description: User banned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /admin/users/{id}/unban:
+    patch:
+      tags: [Admin]
+      summary: Unban a user (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        "200":
+          description: User unbanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /admin/users/{id}/role:
+    patch:
+      tags: [Admin]
+      summary: Change user role (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [MEMBER, ORGANIZER, ADMIN]
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /admin/circles:
+    get:
+      tags: [Admin]
+      summary: List all circles (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, ACTIVE, COMPLETED, DISSOLVED]
+      responses:
+        "200":
+          description: All circles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Get audit logs (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: entity
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+# ═══════════════════════════════════════════════════════════════════════════════
 components:
 
   securitySchemes:
@@ -129,9 +937,122 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    circleId:
+      name: circleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    cursor:
+      name: cursor
+      in: query
+      description: Pagination cursor (ID of last seen item)
+      schema:
+        type: string
+    limit:
+      name: limit
+      in: query
+      description: Number of items per page (max 100)
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: BAD_REQUEST
+              message: Invalid request parameters.
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: AUTH_MISSING_TOKEN
+              message: Authentication required. Provide a Bearer token.
+    Forbidden:
+      description: Insufficient role or permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: RBAC_INSUFFICIENT_ROLE
+              message: "Access denied. Required role(s): ORGANIZER, ADMIN. Your role: MEMBER"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: CIRCLE_NOT_FOUND
+              message: Circle not found.
+    Conflict:
+      description: Conflict with current state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: CIRCLE_ALREADY_MEMBER
+              message: You are already a member of this circle.
+    ValidationError:
+      description: Schema validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Validation failed. Check the details for field-level errors.
+              details:
+                - field: email
+                  message: Invalid email address
+                  location: body
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Too many requests. Retry after 45 seconds.
+
   schemas:
 
-    # ---------- REQUESTS ----------
+    # ── REQUESTS ──────────────────────────────────────────────────────────────
 
     RegisterRequest:
       type: object
@@ -139,13 +1060,18 @@ components:
       properties:
         username:
           type: string
-          example: testuser
+          minLength: 2
+          maxLength: 100
+          example: alice_saves
         email:
           type: string
-          example: test@mail.com
+          format: email
+          example: alice@example.com
         password:
           type: string
-          example: Password123
+          minLength: 8
+          description: Must contain uppercase, lowercase, and a digit
+          example: Secure123
 
     LoginRequest:
       type: object
@@ -153,10 +1079,11 @@ components:
       properties:
         email:
           type: string
-          example: test@mail.com
+          format: email
+          example: alice@example.com
         password:
           type: string
-          example: Password123
+          example: Secure123
 
     RefreshRequest:
       type: object
@@ -165,9 +1092,112 @@ components:
         refreshToken:
           type: string
 
-    # ---------- RESPONSES ----------
+    UpdateMeRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 100
+        phone:
+          type: string
+          example: "+77001234567"
+        avatarUrl:
+          type: string
+          format: uri
 
-    SuccessMessage:
+    CreateCircleRequest:
+      type: object
+      required: [name, contributionAmount, maxMembers, frequencyDays]
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 100
+          example: Family Savings Group
+        description:
+          type: string
+          maxLength: 500
+        contributionAmount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          example: 100
+        currency:
+          type: string
+          length: 3
+          default: USD
+          example: USD
+        maxMembers:
+          type: integer
+          minimum: 2
+          maximum: 50
+          example: 6
+        frequencyDays:
+          type: integer
+          minimum: 7
+          maximum: 365
+          example: 30
+        startDate:
+          type: string
+          format: date-time
+
+    JoinCircleRequest:
+      type: object
+      required: [inviteCode]
+      properties:
+        inviteCode:
+          type: string
+          format: uuid
+
+    CreateSwapRequest:
+      type: object
+      required: [requestedPosition]
+      properties:
+        requestedPosition:
+          type: integer
+          minimum: 1
+          example: 2
+        reason:
+          type: string
+          maxLength: 300
+          example: Medical emergency
+
+    ReleasePayoutRequest:
+      type: object
+      required: [memberId]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          maxLength: 300
+
+    SubmitPaymentRequest:
+      type: object
+      required: [circleId, amount]
+      properties:
+        circleId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0.01
+          example: 100
+        currency:
+          type: string
+          default: USD
+        paymentMethod:
+          type: string
+          enum: [BANK_TRANSFER, CARD, CASH, MOBILE_MONEY]
+        reference:
+          type: string
+          maxLength: 200
+
+    # ── RESPONSES ─────────────────────────────────────────────────────────────
+
+    HealthResponse:
       type: object
       properties:
         success:
@@ -175,9 +1205,144 @@ components:
           example: true
         message:
           type: string
-          example: Success
+        version:
+          type: string
+        environment:
+          type: string
 
-    TokenResponse:
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation successful.
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+                  location:
+                    type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+
+    PaginationMeta:
+      type: object
+      properties:
+        hasMore:
+          type: boolean
+        nextCursor:
+          type: string
+          nullable: true
+        limit:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum: [MEMBER, ORGANIZER, ADMIN]
+        trustScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        createdAt:
+          type: string
+          format: date-time
+
+    UserEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+
+    UserProfileEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              allOf:
+                - $ref: '#/components/schemas/User'
+                - type: object
+                  properties:
+                    trustTier:
+                      type: string
+                      enum: [EXCELLENT, GOOD, FAIR, POOR, HIGH_RISK]
+                    phone:
+                      type: string
+                    avatarUrl:
+                      type: string
+
+    TokenEnvelope:
       type: object
       properties:
         success:
@@ -205,7 +1370,7 @@ components:
             user:
               $ref: '#/components/schemas/User'
 
-    UserResponse:
+    CircleEnvelope:
       type: object
       properties:
         success:
@@ -213,20 +1378,191 @@ components:
         data:
           type: object
           properties:
-            user:
-              $ref: '#/components/schemas/User'
+            circle:
+              $ref: '#/components/schemas/Circle'
 
-    User:
+    Circle:
       type: object
       properties:
         id:
           type: string
-        email:
+          format: uuid
+        name:
           type: string
-        username:
-          type: string
-        role:
-          type: string
-          enum: [MEMBER, ORGANIZER, ADMIN]
-        trustScore:
+        contributionAmount:
           type: number
+        currency:
+          type: string
+        maxMembers:
+          type: integer
+        currentMembers:
+          type: integer
+        frequencyDays:
+          type: integer
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, COMPLETED, DISSOLVED]
+        inviteCode:
+          type: string
+        currentRound:
+          type: integer
+        totalRounds:
+          type: integer
+        nextPaymentDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    RotationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            circle:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                currentRound:
+                  type: integer
+                status:
+                  type: string
+            slots:
+              type: array
+              items:
+                type: object
+                properties:
+                  round:
+                    type: integer
+                  recipient:
+                    type: object
+                    nullable: true
+                  isPaid:
+                    type: boolean
+                  isCurrent:
+                    type: boolean
+
+    PayoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            round:
+              type: integer
+            amount:
+              type: number
+            currency:
+              type: string
+            isLastRound:
+              type: boolean
+
+    PaymentEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            payment:
+              type: object
+              properties:
+                id:
+                  type: string
+                amount:
+                  type: number
+                status:
+                  type: string
+                  enum: [PENDING, PROCESSING, COMPLETED, FAILED, PARTIAL]
+                isPartial:
+                  type: boolean
+                remainingAmount:
+                  type: number
+                lateFee:
+                  type: number
+
+    LedgerVerifyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            balanced:
+              type: boolean
+            entryCount:
+              type: integer
+            currentBalance:
+              type: number
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  entryId:
+                    type: string
+                  issue:
+                    type: string
+
+    DashboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            totalUsers:
+              type: integer
+            totalCircles:
+              type: integer
+            activeCircles:
+              type: integer
+            completedCircles:
+              type: integer
+            totalPayments:
+              type: integer
+            totalRevenue:
+              type: number
+            bannedUsers:
+              type: integer
+
+    PaginatedTrustEvents:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              eventType:
+                type: string
+              delta:
+                type: number
+              scoreAfter:
+                type: number
+              circleId:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/PaginationMeta'
+              

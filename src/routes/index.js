@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { requireRole } = require('../middleware/rbac');
+const { requireRole, requireCircleOrganizer } = require('../middleware/rbac');
 const { validate } = require('../middleware/validate');
 const { idempotency } = require('../middleware/idempotency');
 const { paymentRateLimiter } = require('../middleware/rateLimiter');
@@ -29,36 +29,36 @@ userRouter.get('/me/payments', paymentCtrl.getMyPayments);
 const circleRouter = express.Router();
 circleRouter.use(authenticate);
 
+// ✅ ANY authenticated user can create a circle.
+//    The creator is stored as organizerId on the Circle record.
+//    No global role change — organizer status is per-circle only.
 circleRouter.post(
   '/',
-  requireRole('ORGANIZER', 'ADMIN'),
   validate({ body: schemas.createCircleSchema }),
   circleCtrl.createCircle
 );
+
 circleRouter.get('/', circleCtrl.listMyCircles);
+
+// Any authenticated member can request to join
 circleRouter.post('/join', validate({ body: schemas.joinCircleSchema }), circleCtrl.joinCircle);
+
+// Any member can view their circle
 circleRouter.get('/:id', circleCtrl.getCircle);
+
+// The following routes require the caller to be the circle's organizer
+// (checked inside the service via circle.organizerId === req.user.id)
+// ADMIN can also perform these actions via the requireCircleOrganizer helper
 circleRouter.post(
   '/:id/activate',
-  requireRole('ORGANIZER', 'ADMIN'),
   validate({ body: schemas.activateCircleSchema }),
   circleCtrl.activateCircle
 );
-circleRouter.post(
-  '/:id/dissolve',
-  requireRole('ORGANIZER', 'ADMIN'),
-  circleCtrl.dissolveCircle
-);
-circleRouter.patch(
-  '/:id/members/:memberId/approve',
-  requireRole('ORGANIZER', 'ADMIN'),
-  circleCtrl.approveMember
-);
-circleRouter.patch(
-  '/:id/members/:memberId/reject',
-  requireRole('ORGANIZER', 'ADMIN'),
-  circleCtrl.rejectMember
-);
+
+circleRouter.post('/:id/dissolve', circleCtrl.dissolveCircle);
+
+circleRouter.patch('/:id/members/:memberId/approve', circleCtrl.approveMember);
+circleRouter.patch('/:id/members/:memberId/reject', circleCtrl.rejectMember);
 
 // Circle payments (nested)
 circleRouter.get('/:circleId/payments', paymentCtrl.getCirclePayments);
@@ -71,19 +71,10 @@ circleRouter.post(
   rotationCtrl.createSwapRequest
 );
 circleRouter.get('/:circleId/rotation/swaps', rotationCtrl.getSwapRequests);
-circleRouter.patch(
-  '/:circleId/rotation/swaps/:swapId/approve',
-  requireRole('ORGANIZER', 'ADMIN'),
-  rotationCtrl.approveSwap
-);
-circleRouter.patch(
-  '/:circleId/rotation/swaps/:swapId/reject',
-  requireRole('ORGANIZER', 'ADMIN'),
-  rotationCtrl.rejectSwap
-);
+circleRouter.patch('/:circleId/rotation/swaps/:swapId/approve', rotationCtrl.approveSwap);
+circleRouter.patch('/:circleId/rotation/swaps/:swapId/reject', rotationCtrl.rejectSwap);
 circleRouter.post(
   '/:circleId/payout',
-  requireRole('ORGANIZER', 'ADMIN'),
   validate({ body: schemas.releasePayoutSchema }),
   rotationCtrl.releasePayout
 );
