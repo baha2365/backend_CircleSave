@@ -3,47 +3,63 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 const { validate } = require('../middleware/validate');
+const { requireRole } = require('../middleware/rbac');
 const {
   registerSchema,
   loginSchema,
   refreshSchema,
   logoutSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } = require('../utils/schemas');
-const { register, login, refresh, logout, logoutAll, me } = require('../controllers/authController');
+const {
+  register,
+  verifyEmail,
+  resendVerification,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  me,
+  forgotPassword,
+  resetPassword,
+  emailQueueStatus,
+} = require('../controllers/authController');
 
-/**
- * @swagger POST /auth/register
- * Rate limited: 5 per minute per IP
- */
+// ── Public routes (rate limited) ───────────────────────────────────────────
+
+/** Register → triggers verification email */
 router.post('/register', authRateLimiter, validate({ body: registerSchema }), register);
 
-/**
- * @swagger POST /auth/login
- * Rate limited: 5 per minute per IP
- */
+/** Submit the 6-digit code from the verification email */
+router.post('/verify-email', authRateLimiter, validate({ body: verifyEmailSchema }), verifyEmail);
+
+/** Request a new verification code (if the old one expired) */
+router.post('/resend-verification', authRateLimiter, validate({ body: resendVerificationSchema }), resendVerification);
+
+/** Login — blocked if email not verified */
 router.post('/login', authRateLimiter, validate({ body: loginSchema }), login);
 
-/**
- * @swagger POST /auth/refresh
- */
+/** Refresh access token */
 router.post('/refresh', validate({ body: refreshSchema }), refresh);
 
-/**
- * @swagger POST /auth/logout
- * Requires: authenticated
- */
+/** Request a password reset code via email */
+router.post('/forgot-password', authRateLimiter, validate({ body: forgotPasswordSchema }), forgotPassword);
+
+/** Submit reset code + new password */
+router.post('/reset-password', authRateLimiter, validate({ body: resetPasswordSchema }), resetPassword);
+
+// ── Protected routes (require valid token + verified email) ────────────────
+
 router.post('/logout', authenticate, validate({ body: logoutSchema }), logout);
-
-/**
- * @swagger POST /auth/logout-all
- * Revokes all sessions
- */
 router.post('/logout-all', authenticate, logoutAll);
-
-/**
- * @swagger GET /auth/me
- * Returns current authenticated user
- */
 router.get('/me', authenticate, me);
+
+// ── Admin observability ────────────────────────────────────────────────────
+
+/** View BullMQ email queue stats (waiting / active / completed / failed) */
+router.get('/email-queue-status', authenticate, requireRole('ADMIN'), emailQueueStatus);
 
 module.exports = router;

@@ -84,6 +84,15 @@ model User {
   isBanned     Boolean @default(false)
   bannedReason String?
 
+  // ── Email verification ──────────────────────────
+  isVerified              Boolean   @default(false)
+  verificationToken       String?   @unique
+  verificationTokenExpiry DateTime?
+
+  // ── Password reset ──────────────────────────────
+  passwordResetToken       String?   @unique
+  passwordResetTokenExpiry DateTime?
+
   // Profile
   phone        String?
   avatarUrl    String?
@@ -102,6 +111,8 @@ model User {
 
   @@index([email])
   @@index([role])
+  @@index([verificationToken])
+  @@index([passwordResetToken])
 }
 
 // ─────────────────────────────────────────────

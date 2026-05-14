@@ -5,25 +5,24 @@ const env = require('./config/env');
 const { disconnectDatabase } = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
 const { startCronJobs } = require('./services/cronService');
+const { startEmailWorker, stopEmailWorker } = require('./services/emailQueueService');
 const logger = require('./utils/logger');
 
 let server;
 
 (async () => {
   try {
-    // Connect Redis
     await connectRedis();
     logger.info('Redis connected');
 
-    // Start HTTP server
     server = app.listen(env.PORT, () => {
       logger.info(`🚀 CircleSave API running on port ${env.PORT} [${env.NODE_ENV}]`);
       logger.info(`📖 Swagger docs: http://localhost:${env.PORT}/docs`);
     });
 
-    // Start cron jobs (only in non-test environments)
     if (env.NODE_ENV !== 'test') {
-      startCronJobs();
+      startEmailWorker(); // BullMQ worker — processes Resend jobs from Redis
+      startCronJobs();    // Scheduled debits, late fees, cleanup
     }
   } catch (err) {
     logger.error('Failed to start server', { message: err.message });
@@ -31,12 +30,11 @@ let server;
   }
 })();
 
-// ── Graceful shutdown ─────────────────────────────────────────────────────
-
 async function shutdown(signal) {
   logger.info(`${signal} received. Shutting down gracefully...`);
   if (server) {
     server.close(async () => {
+      await stopEmailWorker();
       await disconnectDatabase();
       await disconnectRedis();
       logger.info('Server shut down cleanly.');
@@ -49,7 +47,6 @@ async function shutdown(signal) {
 
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
-
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection', { reason: String(reason) });
 });

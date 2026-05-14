@@ -38,4 +38,16 @@ async function disconnectRedis() {
   }
 }
 
-module.exports = { getRedisClient, connectRedis, disconnectRedis };
+// Returns a FRESH connection for BullMQ — never reuse the shared client
+function createBullMQConnection() {
+  return new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: null,   // ← BullMQ hard requirement
+    enableReadyCheck: false,      // ← also recommended for BullMQ
+    retryStrategy: (times) => {
+      if (times > 5) return null;
+      return Math.min(times * 200, 3000);
+    },
+  });
+}
+
+module.exports = { getRedisClient, connectRedis, disconnectRedis, createBullMQConnection };

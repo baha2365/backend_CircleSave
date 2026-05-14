@@ -34,6 +34,12 @@ const envSchema = z.object({
   MAX_CIRCLES_PER_USER: z.string().default('3').transform(Number),
   DEFAULT_DETECTION_DAYS: z.string().default('30').transform(Number),
 
+  // ── Email (Resend) ──────────────────────────────────────────────────────────
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+  EMAIL_FROM: z.string().default('onboarding@resend.dev'),
+  // Base URL used to build verification and password-reset links
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
+
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
 });

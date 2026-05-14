@@ -7,12 +7,23 @@ const { prisma } = require('../config/database');
 /**
  * Verify Bearer JWT access token.
  * Attaches decoded user payload to req.user.
+ *
+ * Blocks:
+ *  - Missing / malformed token          → 401 AUTH_MISSING_TOKEN
+ *  - Expired token                      → 401 AUTH_TOKEN_EXPIRED
+ *  - Invalid signature                  → 401 AUTH_INVALID_TOKEN
+ *  - User not found in DB               → 401 AUTH_USER_NOT_FOUND
+ *  - Banned / inactive account          → 403 AUTH_ACCOUNT_SUSPENDED
+ *  - Email not yet verified             → 403 AUTH_EMAIL_NOT_VERIFIED
  */
 const authenticate = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw ApiError.unauthorized('Authentication required. Provide a Bearer token.', 'AUTH_MISSING_TOKEN');
+    throw ApiError.unauthorized(
+      'Authentication required. Provide a Bearer token.',
+      'AUTH_MISSING_TOKEN'
+    );
   }
 
   const token = authHeader.split(' ')[1];
@@ -22,15 +33,20 @@ const authenticate = asyncHandler(async (req, res, next) => {
     decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
-      throw ApiError.unauthorized('Access token expired. Please refresh.', 'AUTH_TOKEN_EXPIRED');
+      throw ApiError.unauthorized(
+        'Access token expired. Please refresh.',
+        'AUTH_TOKEN_EXPIRED'
+      );
     }
     throw ApiError.unauthorized('Invalid access token.', 'AUTH_INVALID_TOKEN');
   }
 
-  // Verify user still exists and is active
   const user = await prisma.user.findUnique({
     where: { id: decoded.sub },
-    select: { id: true, email: true, username: true, role: true, isActive: true, isBanned: true },
+    select: {
+      id: true, email: true, username: true, role: true,
+      isActive: true, isBanned: true, isVerified: true,
+    },
   });
 
   if (!user) {
@@ -39,6 +55,15 @@ const authenticate = asyncHandler(async (req, res, next) => {
 
   if (!user.isActive || user.isBanned) {
     throw ApiError.forbidden('Account is suspended or banned.', 'AUTH_ACCOUNT_SUSPENDED');
+  }
+
+  // ── Block unverified users from ALL protected routes ──────────────────────
+  if (!user.isVerified) {
+    throw ApiError.forbidden(
+      'Please verify your email before accessing this resource. ' +
+      'Check your inbox or call POST /api/v1/auth/resend-verification.',
+      'AUTH_EMAIL_NOT_VERIFIED'
+    );
   }
 
   req.user = user;

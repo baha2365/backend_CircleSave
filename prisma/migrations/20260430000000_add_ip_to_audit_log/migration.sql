@@ -1,1 +1,0 @@
-ALTER TABLE "public"."AuditLog" ADD COLUMN "ip" TEXT;

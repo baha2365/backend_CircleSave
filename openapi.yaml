@@ -184,6 +184,126 @@ paths:
                 $ref: '#/components/schemas/UserEnvelope'
         "401":
           $ref: '#/components/responses/Unauthorized'
+          
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Verify email with 6-digit code
+      description: Submit the code received by email after registration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@example.com
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "482910"
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /auth/resend-verification:
+    post:
+      tags: [Auth]
+      summary: Resend email verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@example.com
+      responses:
+        "200":
+          description: Code resent (generic message prevents email enumeration)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@example.com
+      responses:
+        "200":
+          description: Reset code sent (generic response regardless of whether email exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using the 6-digit code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, newPassword]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@example.com
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "193847"
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: Must contain uppercase, lowercase, and a digit
+                  example: NewSecure456
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
 
   # ── USERS ────────────────────────────────────────────────────────────────────
   /users/me:

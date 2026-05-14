@@ -8,7 +8,7 @@ const registerSchema = z.object({
     .min(2, 'Username must be at least 2 characters')
     .max(100, 'Username must be at most 100 characters')
     .trim(),
-  
+
   email: z
     .string({ required_error: 'Email is required' })
     .email('Invalid email address')
@@ -49,6 +49,60 @@ const logoutSchema = z.object({
   refreshToken: z
     .string({ required_error: 'Refresh token is required' })
     .min(1, 'Refresh token is required'),
+});
+
+// ── Email Verification ────────────────────────────────────────────────────────
+
+const verifyEmailSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .email('Invalid email address')
+    .toLowerCase()
+    .trim(),
+
+  code: z
+    .string({ required_error: 'Verification code is required' })
+    .length(6, 'Verification code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Verification code must contain only digits'),
+});
+
+const resendVerificationSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .email('Invalid email address')
+    .toLowerCase()
+    .trim(),
+});
+
+// ── Password Reset ────────────────────────────────────────────────────────────
+
+const forgotPasswordSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .email('Invalid email address')
+    .toLowerCase()
+    .trim(),
+});
+
+const resetPasswordSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .email('Invalid email address')
+    .toLowerCase()
+    .trim(),
+
+  code: z
+    .string({ required_error: 'Reset code is required' })
+    .length(6, 'Reset code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Reset code must contain only digits'),
+
+  newPassword: z
+    .string({ required_error: 'New password is required' })
+    .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must be at most 128 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
 // ── User Schemas ──────────────────────────────────────────────────────────────
@@ -102,7 +156,7 @@ const createCircleSchema = z.object({
     .max(365, 'Frequency cannot exceed 365 days'),
 
   startDate: z
-    .string({ required_error: 'Start date is required' })
+    .string()
     .datetime({ message: 'Start date must be a valid ISO datetime' })
     .optional(),
 });
@@ -192,6 +246,14 @@ module.exports = {
   loginSchema,
   refreshSchema,
   logoutSchema,
+
+  // Email verification
+  verifyEmailSchema,
+  resendVerificationSchema,
+
+  // Password reset
+  forgotPasswordSchema,
+  resetPasswordSchema,
 
   // User
   updateMeSchema,
