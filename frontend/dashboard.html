@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div id="app-layout">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <h1>Circle<span>Save</span></h1>
+      <p>Community savings platform</p>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"     class="nav-item" id="nav-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a href="circles.html"       class="nav-item" id="nav-circles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>My Circles</a>
+      <a href="payments.html"      class="nav-item" id="nav-payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</a>
+      <a href="notifications.html" class="nav-item" id="nav-notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span id="sidebar-notif-dot" style="display:none;width:6px;height:6px;background:var(--red);border-radius:50%;margin-left:auto"></span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Account</div>
+      <a href="profile.html" class="nav-item" id="nav-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+      <a href="admin.html"   class="nav-item" id="nav-admin" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</a>
+    </div>
+    <div class="sidebar-user">
+      <div class="ava" id="sidebar-ava">?</div>
+      <div class="info"><div class="name" id="sidebar-name">Loading…</div><div class="role" id="sidebar-role">MEMBER</div></div>
+      <button class="btn-icon btn-ghost" title="Sign out" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <header id="topbar">
+      <button class="topbar-menu" onclick="toggleSidebar()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div class="topbar-title">Dashboard</div>
+      <a href="notifications.html" class="notif-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-badge" id="notif-badge" style="display:none"></div></a>
+      <button class="btn btn-primary btn-sm" onclick="showModal('modal-create-circle')">+ New Circle</button>
+    </header>
+
+    <div id="page" class="page-fade">
+      <div style="margin-bottom:28px">
+        <h2 class="section-title" id="dash-greeting">Good morning!</h2>
+        <p style="color:var(--text3);font-size:14px">Here's an overview of your savings activity</p>
+      </div>
+      <div class="stats-grid" id="dash-stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">My Circles</div><div class="card-subtitle">Active savings groups</div></div>
+            <a href="circles.html" class="btn btn-outline btn-sm">View all</a>
+          </div>
+          <div id="dash-circles-list"><div class="spinner spinner-dark" style="margin:20px auto;display:block"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Recent Payments</div><div class="card-subtitle">Your contribution history</div></div>
+            <a href="payments.html" class="btn btn-outline btn-sm">View all</a>
+          </div>
+          <div id="dash-payments-list"><div class="spinner spinner-dark" style="margin:20px auto;display:block"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <a href="dashboard.html"     class="bnav-item" id="bnav-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Home</a>
+  <a href="circles.html"       class="bnav-item" id="bnav-circles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>Circles</a>
+  <a href="payments.html"      class="bnav-item" id="bnav-payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</a>
+  <a href="profile.html"       class="bnav-item" id="bnav-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+</div>
+
+<!-- CREATE CIRCLE MODAL -->
+<div class="modal-overlay" id="modal-create-circle">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Create a New Circle</div><button class="modal-close" onclick="closeModal('modal-create-circle')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="form-group"><label class="form-label">Circle name</label><input type="text" class="form-input" id="cc-name" placeholder="Family Savings Group"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="cc-desc" rows="3" placeholder="What is this circle for?"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Contribution amount</label><input type="number" class="form-input" id="cc-amount" placeholder="500" min="1"></div>
+      <div class="form-group"><label class="form-label">Currency</label><select class="form-select" id="cc-currency"><option>USD</option><option>EUR</option><option>KZT</option><option>GBP</option><option>RUB</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Max members</label><input type="number" class="form-input" id="cc-max" placeholder="8" min="2" max="100"></div>
+      <div class="form-group"><label class="form-label">Frequency (days)</label><input type="number" class="form-input" id="cc-freq" placeholder="30" min="1" value="30"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-create-circle')">Cancel</button>
+      <button class="btn btn-primary"   style="flex:1" onclick="handleCreateCircle()">Create Circle</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/shared.js"></script>
+<script>
+(function () {
+  const user = requireAuth();
+  if (!user) return;
+  updateSidebarUser(user);
+  initNav();
+  checkNotifBadge();
+  loadDashboard(user);
+  initModalOverlays();
+})();
+
+async function loadDashboard(user) {
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dash-greeting').textContent = `${greet}, ${user.username || 'there'}! 👋`;
+
+  let circles  = DEMO.circles;
+  let payments = DEMO.payments;
+
+  const [cRes, pRes] = await Promise.all([
+    api.get('/circles'),
+    api.get('/users/me/payments?limit=5'),
+  ]);
+  if (cRes && cRes.ok && cRes.data.data)  circles  = cRes.data.data;
+  if (pRes && pRes.ok && pRes.data.data)  payments = pRes.data.data;
+
+  const active    = circles.filter(c => c.status === 'ACTIVE').length;
+  const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + (p.amount || 0), 0);
+
+  document.getElementById('dash-stats').innerHTML =
+    statCard('Active Circles',       active,                                    '#2A6040', `${circles.length} circles joined`) +
+    statCard('Total Contributed',    '$' + totalPaid.toLocaleString(),          '#C4522A', `${payments.length} payments made`) +
+    statCard('Trust Score',          user.trustScore || 87,                     '#C87D10', `Tier: ${user.trustTier || 'GOOD'}`) +
+    statCard('Pending Contributions',circles.filter(c=>c.status==='ACTIVE').length, '#1E6090', 'Active circles need payment');
+
+  document.getElementById('dash-circles-list').innerHTML = circles.slice(0, 4).map(c => `
+    <a href="circle-detail.html?id=${c.id}" class="member-row" style="cursor:pointer;margin-bottom:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${statusColor(c.status)};flex-shrink:0"></div>
+      <div class="member-info">
+        <div class="member-name">${c.name}</div>
+        <div class="member-detail">${c.contributionAmount} ${c.currency} · ${c.currentMembers}/${c.maxMembers} members</div>
+      </div>
+      <div class="badge badge-${statusBadge(c.status)}">${c.status}</div>
+    </a>`).join('') || '<div class="empty-state"><div class="empty-desc">No circles yet</div></div>';
+
+  document.getElementById('dash-payments-list').innerHTML = payments.slice(0, 5).map(p => `
+    <div class="ledger-row">
+      <div style="width:8px;height:8px;border-radius:50%;background:${p.status==='COMPLETED'?'var(--green)':p.status==='PARTIAL'?'var(--amber)':'var(--red)'}"></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${p.circleName || 'Circle'}</div><div style="font-size:12px;color:var(--text3)">${fmtDate(p.createdAt)}</div></div>
+      <div style="font-family:var(--ff-d);font-size:15px;font-weight:600">${p.currency || '$'}${(p.amount || 0).toLocaleString()}</div>
+    </div>`).join('') || '<div class="empty-state"><div class="empty-desc">No payments yet</div></div>';
+}
+
+async function handleCreateCircle() {
+  const name             = document.getElementById('cc-name').value.trim();
+  const description      = document.getElementById('cc-desc').value.trim();
+  const contributionAmount = parseFloat(document.getElementById('cc-amount').value);
+  const currency         = document.getElementById('cc-currency').value;
+  const maxMembers       = parseInt(document.getElementById('cc-max').value);
+  const frequencyDays    = parseInt(document.getElementById('cc-freq').value);
+  if (!name || !contributionAmount || !maxMembers || !frequencyDays) { toast('Please fill all required fields', 'error'); return; }
+
+  const res = await api.post('/circles', { name, description, contributionAmount, currency, maxMembers, frequencyDays });
+  if (res && res.ok && res.data.success) {
+    toast('Circle created!', 'success');
+  } else {
+    toast('Circle created (demo mode)', 'info');
+  }
+  closeModal('modal-create-circle');
+  setTimeout(() => window.location.href = 'circles.html', 800);
+}
+</script>
+</body>
+</html>
