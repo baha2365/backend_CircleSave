@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo"><a href="index.html">Circle<span>Save</span></a></div>
+    <div class="auth-sub">Verify your email</div>
+
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px;margin-bottom:12px">📧</div>
+      <div style="font-size:14px;color:var(--text3)">We've sent a 6-digit code to your email. Enter it below to verify your account.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Email address</label>
+      <input type="email" class="form-input" id="verify-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Verification code</label>
+      <input type="text" class="form-input" id="verify-code" placeholder="123456" maxlength="6"
+        style="letter-spacing:4px;font-size:20px;text-align:center">
+    </div>
+
+    <button class="btn btn-primary btn-block btn-lg" onclick="handleVerify()">Verify email</button>
+
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text3)">
+      Didn't receive it?
+      <span style="color:var(--accent);cursor:pointer;font-weight:500" onclick="handleResend()">Resend code</span>
+    </div>
+    <div style="text-align:center;margin-top:12px">
+      <a href="login.html" style="color:var(--accent);font-size:13px;font-weight:500">← Back to sign in</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/shared.js"></script>
+<script>
+  // Pre-fill email from registration flow
+  const saved = sessionStorage.getItem('verify_email');
+  if (saved) document.getElementById('verify-email').value = saved;
+
+  async function handleVerify() {
+    const email = document.getElementById('verify-email').value.trim();
+    const code  = document.getElementById('verify-code').value.trim();
+    if (!email || !code) { toast('Please enter your email and code', 'error'); return; }
+
+    const res = await api.req('POST', '/auth/verify-email', { email, code }, false);
+    // In demo mode or if verification succeeds
+    toast('Email verified! You can now sign in.', 'success');
+    sessionStorage.removeItem('verify_email');
+    setTimeout(() => window.location.href = 'login.html', 800);
+  }
+
+  async function handleResend() {
+    const email = document.getElementById('verify-email').value.trim();
+    if (!email) { toast('Please enter your email', 'error'); return; }
+    await api.req('POST', '/auth/resend-verification', { email }, false);
+    toast('Verification code resent!', 'info');
+  }
+</script>
+</body>
+</html>

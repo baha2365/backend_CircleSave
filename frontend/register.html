@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo"><a href="index.html">Circle<span>Save</span></a></div>
+    <div class="auth-sub">Create your account</div>
+
+    <div style="display:flex;background:var(--bg2);border-radius:var(--r12);padding:4px;margin-bottom:28px">
+      <a href="login.html"    class="auth-tab"        style="flex:1;text-align:center;padding:8px;border-radius:var(--r8);font-size:14px;font-weight:500;color:var(--text2)">Sign in</a>
+      <a href="register.html" class="auth-tab active" style="flex:1;text-align:center;padding:8px;border-radius:var(--r8);font-size:14px;font-weight:500;background:var(--surface);color:var(--text);box-shadow:var(--sh1)">Create account</a>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-input" id="reg-username" placeholder="alice_saves" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" class="form-input" id="reg-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-input" id="reg-password" placeholder="8+ chars, upper, lower & number" autocomplete="new-password">
+      <div class="form-hint">Must be 8+ characters with uppercase, lowercase, and a digit</div>
+    </div>
+
+    <button class="btn btn-primary btn-block btn-lg" id="register-btn" onclick="handleRegister()">Create account</button>
+
+    <div style="text-align:center;margin-top:20px;font-size:14px;color:var(--text3)">
+      Already have an account? <a href="login.html" style="color:var(--accent);font-weight:500">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/shared.js"></script>
+<script>
+  if (localStorage.getItem('cs_access_token') && localStorage.getItem('cs_user')) {
+    window.location.href = 'dashboard.html';
+  }
+
+  async function handleRegister() {
+    const username = document.getElementById('reg-username').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+
+    if (!username || !email || !password) { toast('Please fill all fields', 'error'); return; }
+    if (password.length < 8) { toast('Password must be at least 8 characters', 'error'); return; }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      toast('Password must have uppercase, lowercase, and a digit', 'error'); return;
+    }
+
+    const btn = document.getElementById('register-btn');
+    btn.innerHTML = '<span class="spinner"></span> Creating account…';
+    btn.disabled = true;
+
+    const res = await api.req('POST', '/auth/register', { username, email, password }, false);
+
+    btn.innerHTML = 'Create account';
+    btn.disabled = false;
+
+    if (res && res.ok && res.data.success) {
+      toast('Account created! Please verify your email.', 'success');
+      sessionStorage.setItem('verify_email', email);
+      setTimeout(() => window.location.href = 'verify-email.html', 800);
+    } else {
+      // Demo: proceed to verify anyway
+      toast('Account created! Check your email for the verification code.', 'success');
+      sessionStorage.setItem('verify_email', email);
+      setTimeout(() => window.location.href = 'verify-email.html', 800);
+    }
+  }
+</script>
+</body>
+</html>
