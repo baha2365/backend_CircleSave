@@ -426,7 +426,7 @@ paths:
   /circles:
     post:
       tags: [Circles]
-      summary: Create a new circle (ORGANIZER or ADMIN only)
+      summary: Create a new circle
       security:
         - bearerAuth: []
       requestBody:
