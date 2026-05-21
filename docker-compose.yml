@@ -3,24 +3,23 @@ version: '3.9'
 networks:
   baha2365-backend-circlesave-net:
     driver: bridge
+    name: baha2365-backend-circlesave-net  # explicit name forces creation first
 
 services:
   frontend:
     build: ./frontend
-    container_name: circlesave-frontend
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
       - baha2365-backend-circlesave-net
+    restart: unless-stopped
 
   backend:
     build: .
-    container_name: circlesave-backend
     ports:
       - "3000:3000"
-      - "5555:5555"
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,25 +35,21 @@ services:
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       API_VERSION: v1
-      CORS_ORIGINS: http://localhost:3000,http://localhost,https://baha2365-backend-circlesave-frontend.kazi.rocks
+      CORS_ORIGINS: http://localhost,https://baha2365-backend-circlesave-frontend.kazi.rocks
       FRONTEND_URL: https://baha2365-backend-circlesave-frontend.kazi.rocks
-    volumes:
-      - .:/app
-      - /app/node_modules
+    # removed bind mount — no local filesystem on the server
     command: sh -c "npx prisma generate && npx prisma migrate deploy && node src/server.js"
     networks:
       - baha2365-backend-circlesave-net
+    restart: unless-stopped
 
   postgres:
     image: postgres:16
-    container_name: circlesave-db
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123
       POSTGRES_DB: CircleSave
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -67,7 +62,6 @@ services:
 
   redis:
     image: redis:7
-    container_name: circlesave-redis
     restart: always
     networks:
       - baha2365-backend-circlesave-net
