@@ -141,9 +141,6 @@ const SHARED_MODALS_HTML = `
 </div>
 <div id="toast-container"></div>`;
 
-/**
- * Build the topbar HTML for a given page config.
- */
 function buildTopbar({ title, actionHtml = '', backBtn = false, backHref = 'circles.html', backLabel = 'My Circles' }) {
   return `
   <header id="topbar">
@@ -171,18 +168,6 @@ function buildTopbar({ title, actionHtml = '', backBtn = false, backHref = 'circ
   </header>`;
 }
 
-/**
- * Call this from every app page's inline script.
- *
- * @param {Object}  opts
- * @param {string}  opts.title       - Topbar title text
- * @param {string}  [opts.actionHtml]- HTML for right-side topbar button(s)
- * @param {boolean} [opts.backBtn]   - Show ← back button in topbar
- * @param {string}  [opts.backHref]  - href for back button
- * @param {string}  [opts.backLabel] - Label for back button
- *
- * @returns {Object|null} currentUser, or null if not authenticated
- */
 function initShell(opts = {}) {
   // ── STEP 1 ──────────────────────────────────────────────────────────
   // Inject sidebar INSIDE #app-layout so it becomes a flex sibling of

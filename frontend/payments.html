@@ -8,6 +8,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+  .filter-bar .form-select{width:auto;min-width:140px}
+  .error-banner{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--red-l);border:1px solid #f5c2c2;border-radius:var(--r12);color:var(--red);font-size:14px;font-weight:500}
+  .summary-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+  .summary-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:16px 18px}
+  .summary-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:4px}
+  .summary-val{font-family:var(--ff-d);font-size:22px;font-weight:700;color:var(--text)}
+</style>
 </head>
 <body>
 
@@ -15,40 +24,86 @@
   <div id="main">
     <div id="page" class="page-fade">
 
-      <div class="section-header">
-        <h2 class="section-title">Payment History</h2>
-        <button class="btn btn-primary btn-sm" onclick="openPaymentModal()">+ Submit Payment</button>
+      <div class="section-header" style="margin-bottom:20px">
+        <h2 class="section-title">Payments</h2>
+        <button class="btn btn-primary btn-sm" onclick="showModal('modal-new-payment')">+ Submit Payment</button>
       </div>
 
+      <!-- Summary stats -->
+      <div class="summary-bar" id="payments-summary"></div>
+
       <!-- Filters -->
-      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
-        <select class="form-select" id="filter-status" style="width:auto;min-width:150px" onchange="applyFilter()">
+      <div class="filter-bar">
+        <select class="form-select" id="filter-status" onchange="applyFilters()">
           <option value="">All statuses</option>
           <option value="COMPLETED">Completed</option>
           <option value="PENDING">Pending</option>
           <option value="PARTIAL">Partial</option>
+          <option value="PROCESSING">Processing</option>
           <option value="FAILED">Failed</option>
           <option value="REFUNDED">Refunded</option>
         </select>
-        <select class="form-select" id="filter-circle" style="width:auto;min-width:180px" onchange="applyFilter()">
+        <select class="form-select" id="filter-circle" onchange="applyFilters()">
           <option value="">All circles</option>
         </select>
-        <div id="filter-summary" style="margin-left:auto;font-size:13px;color:var(--text3)"></div>
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear filters</button>
       </div>
 
       <!-- Payment list -->
       <div id="payments-list" class="payments-list">
-        <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
-      </div>
-
-      <!-- Summary card -->
-      <div id="payments-summary" style="margin-top:24px;display:none">
-        <div class="card">
-          <div class="card-title" style="margin-bottom:16px">Summary</div>
-          <div id="summary-content"></div>
+        <div style="text-align:center;padding:60px">
+          <div class="spinner spinner-dark" style="display:inline-block"></div>
+          <div style="margin-top:12px;color:var(--text3);font-size:14px">Loading payments…</div>
         </div>
       </div>
 
+      <div id="load-more-wrap" style="text-align:center;padding:16px;display:none">
+        <button class="btn btn-secondary" onclick="loadMore()">Load more</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- NEW PAYMENT MODAL -->
+<div class="modal-overlay" id="modal-new-payment">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Submit Contribution</div>
+      <button class="modal-close" onclick="closeModal('modal-new-payment')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Circle</label>
+      <select class="form-select" id="pay-circle-id" onchange="onCircleSelect()"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Amount</label>
+        <input type="number" class="form-input" id="pay-amount" min="0.01" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Currency</label>
+        <input type="text" class="form-input" id="pay-currency" readonly style="background:var(--bg2);color:var(--text2)">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Payment method</label>
+      <select class="form-select" id="pay-method">
+        <option value="BANK_TRANSFER">Bank Transfer</option>
+        <option value="CARD">Card</option>
+        <option value="CASH">Cash</option>
+        <option value="CRYPTO">Crypto</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reference (optional)</label>
+      <input type="text" class="form-input" id="pay-ref" placeholder="TXN-2024-001">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-new-payment')">Cancel</button>
+      <button class="btn btn-green"     style="flex:1" id="pay-submit-btn" onclick="handleSubmitPayment()">Submit Payment</button>
     </div>
   </div>
 </div>
@@ -56,104 +111,216 @@
 <script src="js/shared.js"></script>
 <script src="js/app-shell.js"></script>
 <script>
-// ── Boot ───────────────────────────────────────────────
-const pageUser = initShell({
-  title:      'Payments',
-  actionHtml: `<button class="btn btn-primary btn-sm" onclick="openPaymentModal()">+ Submit Payment</button>`
-});
-if (pageUser) loadPayments();
-
-// ── State ──────────────────────────────────────────────
 let allPayments = [];
-let allCircles  = [];
+let userCircles = [];
+let nextCursor  = null;
+let currentFilters = { status: '', circleId: '' };
 
-// ── Load ───────────────────────────────────────────────
-async function loadPayments() {
-  // Load circles for the filter dropdown and payment modal
-  const cRes = await api.get('/circles');
-  allCircles  = (cRes && cRes.ok && cRes.data.data) ? cRes.data.data : DEMO.circles;
-  populatePaymentCircles(allCircles);
-  populateCircleFilter(allCircles);
+(async function boot() {
+  const user = initShell({ title: 'Payments' });
+  if (!user) return;
+  await Promise.all([loadCircles(), loadPayments()]);
+})();
 
-  // Load payments
-  const pRes = await api.get('/users/me/payments');
-  allPayments = (pRes && pRes.ok && pRes.data.data) ? pRes.data.data : DEMO.payments;
-  renderPayments(allPayments);
-}
+// Load user's circles for filter dropdown + payment modal
+async function loadCircles() {
+  const res = await api.get('/circles');
+  if (!res || !res.ok) return;
+  userCircles = res.data.data || [];
 
-function populateCircleFilter(circles) {
-  const sel = document.getElementById('filter-circle');
-  circles.forEach(c => {
+  // Populate filter dropdown
+  const filterSel = document.getElementById('filter-circle');
+  userCircles.forEach(c => {
     const opt = document.createElement('option');
-    opt.value       = c.id;
-    opt.textContent = c.name;
-    sel.appendChild(opt);
+    opt.value = c.id; opt.textContent = c.name;
+    filterSel.appendChild(opt);
   });
+
+  // Populate payment modal dropdown (active circles only)
+  const paySel = document.getElementById('pay-circle-id');
+  const active = userCircles.filter(c => c.status === 'ACTIVE');
+  paySel.innerHTML = active.length
+    ? active.map(c => `<option value="${c.id}" data-currency="${c.currency}" data-amount="${c.contributionAmount}">${c.name}</option>`).join('')
+    : '<option value="">No active circles</option>';
+  onCircleSelect();
 }
 
-// ── Render ─────────────────────────────────────────────
-function renderPayments(payments) {
-  const el = document.getElementById('payments-list');
+function onCircleSelect() {
+  const sel = document.getElementById('pay-circle-id');
+  const opt = sel.selectedOptions[0];
+  if (!opt) return;
+  document.getElementById('pay-currency').value  = opt.dataset.currency  || '';
+  document.getElementById('pay-amount').value    = opt.dataset.amount    || '';
+  document.getElementById('pay-amount').placeholder = opt.dataset.amount || '';
+}
 
-  if (!payments.length) {
-    el.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">💳</div>
-        <div class="empty-title">No payments found</div>
-        <div class="empty-desc">Your contribution history will appear here once you submit payments.</div>
-        <button class="btn btn-primary" onclick="openPaymentModal()">Submit First Payment</button>
+async function loadPayments(append = false) {
+  if (!append) {
+    document.getElementById('payments-list').innerHTML = `
+      <div style="text-align:center;padding:60px">
+        <div class="spinner spinner-dark" style="display:inline-block"></div>
+        <div style="margin-top:12px;color:var(--text3);font-size:14px">Loading payments…</div>
       </div>`;
-    document.getElementById('payments-summary').style.display = 'none';
+  }
+
+  let url = '/users/me/payments?limit=20';
+  if (currentFilters.status)   url += `&status=${currentFilters.status}`;
+  if (currentFilters.circleId) url += `&circleId=${currentFilters.circleId}`;
+  if (append && nextCursor)    url += `&cursor=${nextCursor}`;
+
+  const res = await api.get(url);
+
+  if (!res || !res.ok) {
+    document.getElementById('payments-list').innerHTML = `
+      <div class="error-banner">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ${res?.data?.error?.message || 'Failed to load payments.'}
+      </div>`;
     return;
   }
 
-  el.innerHTML = payments.map(p => paymentRow(p)).join('');
+  const incoming = res.data.data || [];
+  const meta     = res.data.meta?.pagination;
+  nextCursor = meta?.nextCursor || null;
+  document.getElementById('load-more-wrap').style.display = meta?.hasMore ? 'block' : 'none';
 
-  // Summary
+  if (append) {
+    allPayments = [...allPayments, ...incoming];
+  } else {
+    allPayments = incoming;
+    renderSummary(allPayments);
+  }
+
+  renderPaymentsList(append ? incoming : allPayments, append);
+}
+
+function renderSummary(payments) {
   const completed = payments.filter(p => p.status === 'COMPLETED');
-  const pending   = payments.filter(p => p.status === 'PENDING');
-  const partial   = payments.filter(p => p.status === 'PARTIAL');
+  const pending   = payments.filter(p => p.status === 'PENDING' || p.status === 'PARTIAL');
   const totalPaid = completed.reduce((s, p) => s + (p.amount || 0), 0);
+  const currency  = completed[0]?.currency || pending[0]?.currency || '';
 
-  document.getElementById('filter-summary').textContent =
-    `${payments.length} payment${payments.length !== 1 ? 's' : ''}`;
-
-  document.getElementById('summary-content').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px">
-      <div style="text-align:center;padding:16px;background:var(--green-l);border-radius:var(--r12)">
-        <div style="font-size:12px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Paid</div>
-        <div style="font-family:var(--ff-d);font-size:24px;font-weight:700;color:var(--green)">$${totalPaid.toLocaleString()}</div>
-        <div style="font-size:12px;color:var(--green);margin-top:2px">${completed.length} payments</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--amber-l);border-radius:var(--r12)">
-        <div style="font-size:12px;color:var(--amber);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Pending</div>
-        <div style="font-family:var(--ff-d);font-size:24px;font-weight:700;color:var(--amber)">${pending.length}</div>
-        <div style="font-size:12px;color:var(--amber);margin-top:2px">awaiting confirmation</div>
-      </div>
-      <div style="text-align:center;padding:16px;background:var(--blue-l);border-radius:var(--r12)">
-        <div style="font-size:12px;color:var(--blue);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Partial</div>
-        <div style="font-family:var(--ff-d);font-size:24px;font-weight:700;color:var(--blue)">${partial.length}</div>
-        <div style="font-size:12px;color:var(--blue);margin-top:2px">partially paid</div>
-      </div>
+  document.getElementById('payments-summary').innerHTML = `
+    <div class="summary-item">
+      <div class="summary-label">Total paid</div>
+      <div class="summary-val">${totalPaid.toLocaleString()} <span style="font-size:13px;font-weight:400;color:var(--text3)">${currency}</span></div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Completed</div>
+      <div class="summary-val" style="color:var(--green)">${completed.length}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Pending / Partial</div>
+      <div class="summary-val" style="color:var(--amber)">${pending.length}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Total records</div>
+      <div class="summary-val">${payments.length}</div>
     </div>`;
-  document.getElementById('payments-summary').style.display = 'block';
 }
 
-// ── Filter ─────────────────────────────────────────────
-function applyFilter() {
-  const status   = document.getElementById('filter-status').value;
-  const circleId = document.getElementById('filter-circle').value;
-  let filtered   = allPayments;
-  if (status)   filtered = filtered.filter(p => p.status   === status);
-  if (circleId) filtered = filtered.filter(p => p.circleId === circleId);
-  renderPayments(filtered);
+function renderPaymentsList(payments, append = false) {
+  if (!payments.length && !append) {
+    document.getElementById('payments-list').innerHTML = `
+      <div class="empty-state" style="text-align:center;padding:60px 20px">
+        <div style="font-size:40px;margin-bottom:12px">💳</div>
+        <div style="font-family:var(--ff-d);font-size:20px;font-weight:600;color:var(--text2);margin-bottom:8px">No payments found</div>
+        <div style="font-size:14px;color:var(--text3);margin-bottom:20px">
+          ${currentFilters.status || currentFilters.circleId ? 'Try adjusting your filters.' : 'Submit your first contribution to get started.'}
+        </div>
+        ${!currentFilters.status && !currentFilters.circleId ? `<button class="btn btn-primary" onclick="showModal('modal-new-payment')">Submit Payment</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  const rows = payments.map(p => `
+    <div class="payment-row">
+      <div class="payment-icon" style="background:${iconBg(p.status)}">
+        <span style="font-size:16px;color:${iconColor(p.status)}">${iconChar(p.status)}</span>
+      </div>
+      <div class="payment-info">
+        <div class="payment-desc">${p.circleName || 'Contribution'}</div>
+        <div class="payment-date">
+          ${p.createdAt ? fmtDate(p.createdAt) : 'Pending'}
+          ${p.paymentMethod ? ' · ' + p.paymentMethod.replace('_', ' ') : ''}
+          ${p.isPartial ? ' · <span style="color:var(--amber);font-weight:500">Partial</span>' : ''}
+          ${p.remainingAmount ? ` · <span style="color:var(--red);font-size:11px">Remaining: ${p.remainingAmount.toLocaleString()} ${p.currency}</span>` : ''}
+        </div>
+        ${p.reference ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:monospace">Ref: ${p.reference}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="payment-amount" style="color:${iconColor(p.status)}">${p.currency || ''}${(p.amount || 0).toLocaleString()}</div>
+        <div class="badge badge-${statusBadge2(p.status)}" style="font-size:11px;margin-top:4px">${p.status}</div>
+        ${p.lateFee ? `<div style="font-size:11px;color:var(--red);margin-top:2px">Late fee: ${p.lateFee}</div>` : ''}
+      </div>
+    </div>`).join('');
+
+  if (append) {
+    document.getElementById('payments-list').insertAdjacentHTML('beforeend', rows);
+  } else {
+    document.getElementById('payments-list').innerHTML = rows;
+  }
 }
 
-// ── Open payment modal with circles pre-filled ─────────
-function openPaymentModal() {
-  populatePaymentCircles(allCircles);
-  showModal('modal-payment');
+// Status helpers
+function iconBg(s)   { return { COMPLETED:'var(--green-l)', PENDING:'var(--amber-l)', PARTIAL:'var(--blue-l)', PROCESSING:'var(--blue-l)', FAILED:'var(--red-l)', REFUNDED:'var(--bg3)' }[s] || 'var(--bg3)'; }
+function iconColor(s){ return { COMPLETED:'var(--green)',   PENDING:'var(--amber)',   PARTIAL:'var(--blue)',   PROCESSING:'var(--blue)',   FAILED:'var(--red)',   REFUNDED:'var(--text3)' }[s] || 'var(--text3)'; }
+function iconChar(s) { return { COMPLETED:'✓', PENDING:'⏳', PARTIAL:'½', PROCESSING:'↻', FAILED:'✕', REFUNDED:'↩' }[s] || '?'; }
+function statusBadge2(s){ return { COMPLETED:'green', PENDING:'amber', PARTIAL:'blue', PROCESSING:'blue', FAILED:'red', REFUNDED:'gray' }[s] || 'gray'; }
+
+function applyFilters() {
+  currentFilters.status   = document.getElementById('filter-status').value;
+  currentFilters.circleId = document.getElementById('filter-circle').value;
+  nextCursor = null;
+  loadPayments();
 }
+
+function clearFilters() {
+  document.getElementById('filter-status').value  = '';
+  document.getElementById('filter-circle').value  = '';
+  currentFilters = { status: '', circleId: '' };
+  nextCursor = null;
+  loadPayments();
+}
+
+function loadMore() { loadPayments(true); }
+
+async function handleSubmitPayment() {
+  const circleId  = document.getElementById('pay-circle-id').value;
+  const amount    = parseFloat(document.getElementById('pay-amount').value);
+  const currency  = document.getElementById('pay-currency').value;
+  const paymentMethod = document.getElementById('pay-method').value;
+  const reference = document.getElementById('pay-ref').value.trim();
+
+  if (!circleId) { toast('Please select a circle', 'error'); return; }
+  if (!amount || amount <= 0) { toast('Please enter a valid amount', 'error'); return; }
+
+  const btn = document.getElementById('pay-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting…';
+
+  const res = await api.post('/payments', {
+    circleId, amount, currency, paymentMethod,
+    reference: reference || undefined
+  });
+
+  btn.disabled = false; btn.innerHTML = 'Submit Payment';
+
+  if (!res || !res.ok) {
+    toast(res?.data?.error?.message || 'Failed to submit payment', 'error');
+    return;
+  }
+
+  const p = res.data.data?.payment;
+  toast(`Payment submitted! Status: ${p?.status || 'PENDING'}`, 'success');
+  closeModal('modal-new-payment');
+  document.getElementById('pay-ref').value = '';
+  await loadPayments();
+}
+
+// Init modal overlays for this page
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
 </script>
 </body>
 </html>

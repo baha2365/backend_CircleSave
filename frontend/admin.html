@@ -8,6 +8,34 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  .admin-tabs{display:flex;gap:2px;background:var(--bg2);border-radius:var(--r12);padding:4px;margin-bottom:28px;overflow-x:auto}
+  .admin-tab{padding:9px 20px;border-radius:var(--r8);font-size:14px;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;transition:.15s;border:none;background:none}
+  .admin-tab.active{background:var(--surface);color:var(--accent);box-shadow:var(--sh1)}
+  .admin-tab-content{display:none}
+  .admin-tab-content.active{display:block}
+  .user-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .user-row:last-child{border-bottom:none}
+  .user-row:hover{background:var(--bg2)}
+  .circle-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+  .circle-row:last-child{border-bottom:none}
+  .circle-row:hover{background:var(--bg2)}
+  .audit-row{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+  .audit-row:last-child{border-bottom:none}
+  .search-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .search-bar .form-input{max-width:280px}
+  .search-bar .form-select{width:auto;min-width:120px}
+  .error-banner{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--red-l);border:1px solid #f5c2c2;border-radius:var(--r12);color:var(--red);font-size:14px;font-weight:500;margin-bottom:16px}
+  .action-menu{position:relative;display:inline-block}
+  .action-menu-btn{padding:6px 12px;border-radius:var(--r8);background:var(--bg2);border:1px solid var(--border);font-size:12px;cursor:pointer}
+  .action-menu-btn:hover{background:var(--bg3)}
+  .action-dropdown{position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border);border-radius:var(--r12);padding:6px;min-width:160px;box-shadow:var(--sh3);z-index:99;display:none}
+  .action-dropdown.open{display:block}
+  .action-dropdown button{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:var(--r8);font-size:13px;border:none;background:none;cursor:pointer;color:var(--text2)}
+  .action-dropdown button:hover{background:var(--bg2);color:var(--text)}
+  .action-dropdown button.danger{color:var(--red)}
+  .action-dropdown button.danger:hover{background:var(--red-l)}
+</style>
 </head>
 <body>
 
@@ -17,73 +45,24 @@
 
       <div style="margin-bottom:28px">
         <h2 class="section-title">Admin Dashboard</h2>
-        <p style="color:var(--text3);font-size:14px">Platform-wide statistics and management</p>
+        <p style="color:var(--text3);font-size:14px">Platform-wide statistics and management tools</p>
       </div>
 
-      <!-- Platform stats -->
+      <!-- Stats -->
       <div class="admin-grid" id="admin-stats">
-        <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+        ${[1,2,3,4,5,6,7].map(()=>`<div class="stat-card"><div class="skeleton" style="height:60px"></div></div>`).join('')}
       </div>
 
-      <!-- Revenue chart placeholder -->
-      <div class="card" style="margin-bottom:24px" id="revenue-card" style="display:none">
-        <div class="card-header">
-          <div class="card-title">Revenue Overview</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" id="rev-btn-30"   onclick="setRevPeriod(30)"  >30 days</button>
-            <button class="btn btn-secondary btn-sm" id="rev-btn-90" onclick="setRevPeriod(90)">90 days</button>
-          </div>
-        </div>
-        <div id="revenue-chart" style="height:120px;display:flex;align-items:flex-end;gap:4px;padding:4px 0"></div>
+      <!-- Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="users"      onclick="switchAdminTab('users',this)">Users</button>
+        <button class="admin-tab"        data-tab="circles"    onclick="switchAdminTab('circles',this)">Circles</button>
+        <button class="admin-tab"        data-tab="audit-logs" onclick="switchAdminTab('audit-logs',this)">Audit Logs</button>
       </div>
 
-      <!-- Management grid -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
-        <!-- Users -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Users</div>
-              <div class="card-subtitle" id="users-count">—</div>
-            </div>
-            <div style="display:flex;gap:8px">
-              <input type="text" class="form-input" id="user-search" placeholder="Search…" style="width:120px;padding:7px 10px;font-size:13px" oninput="filterUsers(this.value)">
-              <button class="btn btn-secondary btn-sm" onclick="loadUsers()">↻</button>
-            </div>
-          </div>
-          <div id="admin-users-list"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
-        </div>
-
-        <!-- Circles -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <div class="card-title">All Circles</div>
-              <div class="card-subtitle" id="circles-count">—</div>
-            </div>
-            <div style="display:flex;gap:8px">
-              <select class="form-select" id="circle-status-filter" style="width:auto;font-size:13px;padding:7px 10px" onchange="filterCircles(this.value)">
-                <option value="">All</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PENDING">Pending</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="DISSOLVED">Dissolved</option>
-              </select>
-              <button class="btn btn-secondary btn-sm" onclick="loadCircles()">↻</button>
-            </div>
-          </div>
-          <div id="admin-circles-list"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
-        </div>
-      </div>
-
-      <!-- Recent activity -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Recent Platform Activity</div>
-          <button class="btn btn-secondary btn-sm" onclick="loadActivity()">↻ Refresh</button>
-        </div>
-        <div id="admin-activity"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
-      </div>
+      <div id="admin-tab-users"      class="admin-tab-content active"></div>
+      <div id="admin-tab-circles"    class="admin-tab-content"></div>
+      <div id="admin-tab-audit-logs" class="admin-tab-content"></div>
 
     </div>
   </div>
@@ -93,199 +72,436 @@
 <div class="modal-overlay" id="modal-ban">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Ban User</div>
+      <div class="modal-title" style="color:var(--red)">Ban User</div>
       <button class="modal-close" onclick="closeModal('modal-ban')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <div style="margin-bottom:16px;color:var(--text3);font-size:14px">Banning a user will revoke their access and notify them via email.</div>
-    <div id="ban-user-info" style="background:var(--bg2);border-radius:var(--r8);padding:12px;margin-bottom:16px;font-size:13px"></div>
+    <div style="margin-bottom:16px;font-size:14px;color:var(--text2)">
+      Banning <strong id="ban-username"></strong> will prevent them from accessing the platform.
+    </div>
     <div class="form-group">
-      <label class="form-label">Reason for ban</label>
-      <textarea class="form-input" id="ban-reason" rows="3" placeholder="Repeated late payments, suspicious activity…"></textarea>
+      <label class="form-label">Reason</label>
+      <textarea class="form-input" id="ban-reason" rows="3" placeholder="Repeated payment defaults and fraudulent activity"></textarea>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-ban')">Cancel</button>
-      <button class="btn btn-danger"    style="flex:1" onclick="confirmBan()">Confirm Ban</button>
+      <button class="btn btn-danger"    style="flex:1" id="ban-submit-btn" onclick="handleBanUser()">Ban User</button>
     </div>
   </div>
 </div>
 
+<!-- CHANGE ROLE MODAL -->
+<div class="modal-overlay" id="modal-role">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Change Role</div>
+      <button class="modal-close" onclick="closeModal('modal-role')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="margin-bottom:16px;font-size:14px;color:var(--text2)">
+      Changing role for <strong id="role-username"></strong>
+    </div>
+    <div class="form-group">
+      <label class="form-label">New role</label>
+      <select class="form-select" id="role-select">
+        <option value="MEMBER">MEMBER</option>
+        <option value="ORGANIZER">ORGANIZER</option>
+        <option value="ADMIN">ADMIN</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-role')">Cancel</button>
+      <button class="btn btn-primary"   style="flex:1" id="role-submit-btn" onclick="handleChangeRole()">Save Role</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
 <script src="js/shared.js"></script>
 <script src="js/app-shell.js"></script>
 <script>
-// ── Boot ───────────────────────────────────────────────
-const pageUser = initShell({ title: 'Admin Dashboard' });
+let targetUserId   = null;
+let targetUsername = null;
+let usersNextCursor  = null;
+let circlesNextCursor = null;
+let auditNextCursor   = null;
 
-if (pageUser) {
-  // Redirect non-admins
-  if (pageUser.role !== 'ADMIN') {
-    toast('Access denied — Admins only', 'error');
-    setTimeout(() => window.location.href = 'dashboard.html', 1200);
-  } else {
-    loadAdmin();
-    initModalOverlays();
+(async function boot() {
+  const user = initShell({ title: 'Admin' });
+  if (!user) return;
+
+  // Role guard
+  if (user.role !== 'ADMIN') {
+    document.getElementById('page').innerHTML = `
+      <div style="text-align:center;padding:80px 20px">
+        <div style="font-size:48px;margin-bottom:16px">🚫</div>
+        <div style="font-family:var(--ff-d);font-size:24px;font-weight:700;margin-bottom:8px">Access Denied</div>
+        <div style="color:var(--text3);font-size:15px;margin-bottom:24px">This page requires ADMIN role.</div>
+        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+      </div>`;
+    return;
   }
-}
 
-// ── State ──────────────────────────────────────────────
-let allUsers   = [];
-let allCircles = [];
-let banTarget  = null;
-
-// ── Main load ──────────────────────────────────────────
-async function loadAdmin() {
-  const [statsRes] = await Promise.all([
-    api.get('/admin/dashboard'),
-  ]);
-  const stats = (statsRes && statsRes.ok && statsRes.data.data) ? statsRes.data.data : DEMO.adminStats;
-  renderStats(stats);
-  renderRevenueChart(stats);
+  await loadDashboardStats();
   loadUsers();
-  loadCircles();
-  loadActivity();
-}
+})();
 
-// ── Stats ──────────────────────────────────────────────
-function renderStats(s) {
-  const items = [
-    { label: 'Total Users',       val: s.totalUsers,      icon: '👥', color: '#1E6090' },
-    { label: 'Total Circles',     val: s.totalCircles,    icon: '⭕', color: '#C4522A' },
-    { label: 'Active Circles',    val: s.activeCircles,   icon: '✅', color: '#2A6040' },
-    { label: 'Completed Circles', val: s.completedCircles,icon: '🎉', color: '#2A6040' },
-    { label: 'Total Payments',    val: s.totalPayments?.toLocaleString(),    icon: '💳', color: '#C87D10' },
-    { label: 'Total Revenue',     val: '$' + (s.totalRevenue || 0).toLocaleString(), icon: '💰', color: '#2A6040' },
-    { label: 'Banned Users',      val: s.bannedUsers,     icon: '🚫', color: '#C42828' },
-  ];
-  document.getElementById('admin-stats').innerHTML = items.map(i => `
+// ── Dashboard stats ───────────────────────────────────────
+async function loadDashboardStats() {
+  const res = await api.get('/admin/dashboard');
+  if (!res || !res.ok) {
+    document.getElementById('admin-stats').innerHTML = `
+      <div style="grid-column:1/-1">
+        <div class="error-banner">
+          ${res?.data?.error?.message || 'Failed to load dashboard stats.'}
+        </div>
+      </div>`;
+    return;
+  }
+
+  const s = res.data.data;
+  document.getElementById('admin-stats').innerHTML = [
+    ['Total Users',       s.totalUsers,                       '👥', '#1E6090'],
+    ['Total Circles',     s.totalCircles,                     '⭕', '#C4522A'],
+    ['Active Circles',    s.activeCircles,                    '✅', '#2A6040'],
+    ['Completed',         s.completedCircles,                 '🎉', '#2A6040'],
+    ['Total Payments',    s.totalPayments?.toLocaleString(),  '💳', '#C87D10'],
+    ['Total Revenue',     '$'+(s.totalRevenue||0).toLocaleString(), '💰', '#2A6040'],
+    ['Banned Users',      s.bannedUsers,                      '🚫', '#C42828'],
+  ].map(([label, val, icon, color]) => `
     <div class="stat-card">
-      <div style="font-size:28px;margin-bottom:8px">${i.icon}</div>
-      <div class="stat-label">${i.label}</div>
-      <div class="stat-val" style="color:${i.color}">${i.val ?? '—'}</div>
+      <div style="font-size:28px;margin-bottom:8px">${icon}</div>
+      <div class="stat-label">${label}</div>
+      <div class="stat-val" style="color:${color}">${val ?? '—'}</div>
     </div>`).join('');
 }
 
-// ── Revenue chart ──────────────────────────────────────
-function renderRevenueChart(stats) {
-  // Fake sparkline data based on stats
-  const bars = Array.from({ length: 12 }, (_, i) => Math.floor(Math.random() * 80 + 20));
-  const max  = Math.max(...bars);
-  document.getElementById('revenue-chart').innerHTML = bars.map((v, i) => `
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-      <div style="width:100%;background:${i === bars.length-1 ? 'var(--accent)' : 'var(--border)'};border-radius:2px 2px 0 0;height:${Math.round((v/max)*100)}px;transition:.3s"></div>
-    </div>`).join('');
-  document.getElementById('revenue-card').style.display = 'block';
+// ── Tab switching ─────────────────────────────────────────
+function switchAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById(`admin-tab-${tab}`).classList.add('active');
+
+  if (tab === 'users'      && !document.getElementById('admin-tab-users').dataset.loaded) loadUsers();
+  if (tab === 'circles'    && !document.getElementById('admin-tab-circles').dataset.loaded) loadAdminCircles();
+  if (tab === 'audit-logs' && !document.getElementById('admin-tab-audit-logs').dataset.loaded) loadAuditLogs();
 }
 
-function setRevPeriod(days) {
-  ['30','90'].forEach(d => {
-    document.getElementById('rev-btn-'+d).className = d == days ? 'btn btn-secondary btn-sm' : 'btn btn-ghost btn-sm';
-  });
-  renderRevenueChart(DEMO.adminStats); // refresh with new data
-}
+// ── USERS ─────────────────────────────────────────────────
+let usersSearchTimeout = null;
 
-// ── Users ──────────────────────────────────────────────
-async function loadUsers() {
-  document.getElementById('admin-users-list').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
-  const res = await api.get('/admin/users');
-  allUsers  = (res && res.ok && res.data.data) ? res.data.data : DEMO.adminUsers;
-  document.getElementById('users-count').textContent = `${allUsers.length} total users`;
-  renderUsers(allUsers);
-}
+async function loadUsers(append = false, search = '', role = '') {
+  const container = document.getElementById('admin-tab-users');
+  container.dataset.loaded = '1';
 
-function renderUsers(users) {
-  if (!users.length) {
-    document.getElementById('admin-users-list').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No users found.</div></div>';
+  if (!append) {
+    container.innerHTML = `
+      <div class="search-bar">
+        <input type="text" class="form-input" placeholder="Search username or email…" id="user-search"
+          oninput="debouncedSearch()">
+        <select class="form-select" id="user-role-filter" onchange="loadUsers(false,document.getElementById('user-search').value,this.value)">
+          <option value="">All roles</option>
+          <option value="MEMBER">MEMBER</option>
+          <option value="ORGANIZER">ORGANIZER</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadUsers()">Refresh</button>
+      </div>
+      <div id="users-table" class="card" style="padding:0;overflow:hidden">
+        <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+      </div>
+      <div id="users-more" style="text-align:center;padding:16px;display:none">
+        <button class="btn btn-secondary btn-sm" onclick="loadUsersMore()">Load more</button>
+      </div>`;
+  }
+
+  let url = '/admin/users?limit=20';
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (role)   url += `&role=${role}`;
+  if (append && usersNextCursor) url += `&cursor=${usersNextCursor}`;
+
+  const res = await api.get(url);
+  const table = document.getElementById('users-table');
+  if (!table) return;
+
+  if (!res || !res.ok) {
+    table.innerHTML = `<div class="error-banner" style="margin:16px">${res?.data?.error?.message || 'Failed to load users.'}</div>`;
     return;
   }
-  document.getElementById('admin-users-list').innerHTML = users.slice(0, 10).map(u => `
-    <div class="member-row" style="margin-bottom:6px">
+
+  const users = res.data.data || [];
+  const meta  = res.data.meta?.pagination;
+  usersNextCursor = meta?.nextCursor || null;
+  const moreBtn = document.getElementById('users-more');
+  if (moreBtn) moreBtn.style.display = meta?.hasMore ? 'block' : 'none';
+
+  if (!users.length && !append) {
+    table.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No users found.</div>`;
+    return;
+  }
+
+  const rows = users.map(u => `
+    <div class="user-row">
       <div class="member-ava" style="background:${u.role==='ADMIN'?'var(--red-l)':u.role==='ORGANIZER'?'var(--accent-l)':'var(--blue-l)'};color:${u.role==='ADMIN'?'var(--red)':u.role==='ORGANIZER'?'var(--accent)':'var(--blue)'}">
-        ${(u.username || '?').slice(0, 2).toUpperCase()}
+        ${(u.username||'?').slice(0,2).toUpperCase()}
       </div>
-      <div class="member-info">
-        <div class="member-name">${u.username}</div>
-        <div class="member-detail">${u.email} · Score: ${u.trustScore ?? '—'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${u.username}</div>
+        <div style="font-size:12px;color:var(--text3)">${u.email} · Trust: ${u.trustScore}</div>
+        <div style="font-size:11px;color:var(--text3)">Joined ${fmtDate(u.createdAt)}</div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <div class="badge badge-${roleBadge(u.role)}" style="font-size:10px">${u.role}</div>
-        ${u.role !== 'ADMIN' ? `
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px;color:var(--red)" onclick="openBan('${u.id}','${u.username}','${u.email}')">Ban</button>` : ''}
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="badge badge-${roleBadge(u.role)}" style="font-size:11px">${u.role}</div>
+        ${u.banned ? '<div class="badge badge-red" style="font-size:11px">BANNED</div>' : ''}
+        <div class="action-menu" id="menu-${u.id}">
+          <button class="action-menu-btn" onclick="toggleMenu('${u.id}')">Actions ▾</button>
+          <div class="action-dropdown" id="dropdown-${u.id}">
+            <button onclick="openRoleModal('${u.id}','${u.username}','${u.role}')">Change Role</button>
+            ${u.banned
+              ? `<button onclick="handleUnban('${u.id}','${u.username}')">Unban User</button>`
+              : `<button class="danger" onclick="openBanModal('${u.id}','${u.username}')">Ban User</button>`}
+          </div>
+        </div>
       </div>
-    </div>`).join('') +
-    (users.length > 10 ? `<div style="text-align:center;padding:12px;font-size:13px;color:var(--text3)">${users.length - 10} more users…</div>` : '');
+    </div>`).join('');
+
+  if (append) {
+    table.insertAdjacentHTML('beforeend', rows);
+  } else {
+    table.innerHTML = rows;
+  }
 }
 
-function filterUsers(query) {
-  const q = query.toLowerCase();
-  renderUsers(q ? allUsers.filter(u => u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) : allUsers);
+function debouncedSearch() {
+  clearTimeout(usersSearchTimeout);
+  usersSearchTimeout = setTimeout(() => {
+    const search = document.getElementById('user-search')?.value || '';
+    const role   = document.getElementById('user-role-filter')?.value || '';
+    loadUsers(false, search, role);
+  }, 350);
 }
 
-// ── Circles ────────────────────────────────────────────
-async function loadCircles() {
-  document.getElementById('admin-circles-list').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
-  const res  = await api.get('/admin/circles');
-  allCircles = (res && res.ok && res.data.data) ? res.data.data : DEMO.circles;
-  document.getElementById('circles-count').textContent = `${allCircles.length} total circles`;
-  renderCircles(allCircles);
+function loadUsersMore() {
+  const search = document.getElementById('user-search')?.value || '';
+  const role   = document.getElementById('user-role-filter')?.value || '';
+  loadUsers(true, search, role);
 }
 
-function renderCircles(circles) {
-  if (!circles.length) {
-    document.getElementById('admin-circles-list').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No circles found.</div></div>';
+// ── CIRCLES ───────────────────────────────────────────────
+async function loadAdminCircles(append = false, status = '') {
+  const container = document.getElementById('admin-tab-circles');
+  container.dataset.loaded = '1';
+
+  if (!append) {
+    container.innerHTML = `
+      <div class="search-bar">
+        <select class="form-select" id="circle-status-filter" onchange="loadAdminCircles(false,this.value)">
+          <option value="">All statuses</option>
+          <option value="PENDING">PENDING</option>
+          <option value="ACTIVE">ACTIVE</option>
+          <option value="COMPLETED">COMPLETED</option>
+          <option value="DISSOLVED">DISSOLVED</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadAdminCircles()">Refresh</button>
+      </div>
+      <div id="circles-table" class="card" style="padding:0;overflow:hidden">
+        <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+      </div>
+      <div id="circles-more" style="text-align:center;padding:16px;display:none">
+        <button class="btn btn-secondary btn-sm" onclick="loadAdminCirclesMore()">Load more</button>
+      </div>`;
+  }
+
+  let url = '/admin/circles?limit=20';
+  if (status) url += `&status=${status}`;
+  if (append && circlesNextCursor) url += `&cursor=${circlesNextCursor}`;
+
+  const res = await api.get(url);
+  const table = document.getElementById('circles-table');
+  if (!table) return;
+
+  if (!res || !res.ok) {
+    table.innerHTML = `<div class="error-banner" style="margin:16px">${res?.data?.error?.message || 'Failed to load circles.'}</div>`;
     return;
   }
-  document.getElementById('admin-circles-list').innerHTML = circles.map(c => `
-    <a href="circle-detail.html?id=${c.id}" class="member-row" style="margin-bottom:6px;cursor:pointer">
+
+  const circles = res.data.data || [];
+  const meta    = res.data.meta?.pagination;
+  circlesNextCursor = meta?.nextCursor || null;
+  const moreBtn = document.getElementById('circles-more');
+  if (moreBtn) moreBtn.style.display = meta?.hasMore ? 'block' : 'none';
+
+  if (!circles.length && !append) {
+    table.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No circles found.</div>`;
+    return;
+  }
+
+  const rows = circles.map(c => `
+    <div class="circle-row" onclick="window.location.href='circle-detail.html?id=${c.id}'">
       <div style="width:10px;height:10px;border-radius:50%;background:${statusColor(c.status)};flex-shrink:0"></div>
-      <div class="member-info">
-        <div class="member-name">${c.name}</div>
-        <div class="member-detail">${c.currentMembers}/${c.maxMembers} members · ${c.contributionAmount} ${c.currency} · Round ${c.currentRound || 0}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${c.name}</div>
+        <div style="font-size:12px;color:var(--text3)">
+          ${c.contributionAmount?.toLocaleString()} ${c.currency} · ${c.currentMembers}/${c.maxMembers} members
+          ${c.currentRound ? ` · Round ${c.currentRound}/${c.totalRounds}` : ''}
+        </div>
       </div>
-      <div class="badge badge-${statusBadge(c.status)}" style="font-size:10px;flex-shrink:0">${c.status}</div>
-    </a>`).join('');
-}
-
-function filterCircles(status) {
-  renderCircles(status ? allCircles.filter(c => c.status === status) : allCircles);
-}
-
-// ── Activity ───────────────────────────────────────────
-async function loadActivity() {
-  document.getElementById('admin-activity').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
-  // Use demo payments/notifs as activity proxy
-  const activities = [
-    ...DEMO.payments.map(p => ({ type: 'PAYMENT', icon: '💳', color: 'var(--green)',  text: `${p.circleName} — ${p.currency}${p.amount} payment (${p.status})`,   date: p.createdAt })),
-    ...DEMO.notifications.map(n => ({ type: 'EVENT',   icon: '🔔', color: 'var(--blue)', text: n.data?.body || 'Platform event', date: n.createdAt })),
-  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12);
-
-  document.getElementById('admin-activity').innerHTML = activities.map(a => `
-    <div class="ledger-row">
-      <div style="width:32px;height:32px;border-radius:50%;background:${a.color}18;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${a.icon}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${a.text}</div>
-        <div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)}</div>
-      </div>
-      <div class="badge badge-${a.type === 'PAYMENT' ? 'green' : 'blue'}" style="font-size:10px">${a.type}</div>
+      <div class="badge badge-${statusBadge(c.status)}">${c.status}</div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </div>`).join('');
+
+  if (append) {
+    table.insertAdjacentHTML('beforeend', rows);
+  } else {
+    table.innerHTML = rows;
+  }
 }
 
-// ── Ban ────────────────────────────────────────────────
-function openBan(userId, username, email) {
-  banTarget = { userId, username, email };
-  document.getElementById('ban-user-info').innerHTML = `<strong>${username}</strong> &nbsp;·&nbsp; ${email}`;
+function loadAdminCirclesMore() {
+  const status = document.getElementById('circle-status-filter')?.value || '';
+  loadAdminCircles(true, status);
+}
+
+// ── AUDIT LOGS ────────────────────────────────────────────
+async function loadAuditLogs(append = false) {
+  const container = document.getElementById('admin-tab-audit-logs');
+  container.dataset.loaded = '1';
+
+  if (!append) {
+    container.innerHTML = `
+      <div class="search-bar">
+        <input type="text" class="form-input" id="audit-action" placeholder="Filter by action…">
+        <input type="text" class="form-input" id="audit-entity" placeholder="Filter by entity…">
+        <button class="btn btn-secondary btn-sm" onclick="applyAuditFilter()">Filter</button>
+        <button class="btn btn-ghost btn-sm"      onclick="clearAuditFilter()">Clear</button>
+      </div>
+      <div id="audit-table" class="card" style="padding:0;overflow:hidden">
+        <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+      </div>
+      <div id="audit-more" style="text-align:center;padding:16px;display:none">
+        <button class="btn btn-secondary btn-sm" onclick="loadAuditMore()">Load more</button>
+      </div>`;
+  }
+
+  const action = document.getElementById('audit-action')?.value.trim() || '';
+  const entity = document.getElementById('audit-entity')?.value.trim() || '';
+  let url = '/admin/audit-logs?limit=30';
+  if (action) url += `&action=${encodeURIComponent(action)}`;
+  if (entity) url += `&entity=${encodeURIComponent(entity)}`;
+  if (append && auditNextCursor) url += `&cursor=${auditNextCursor}`;
+
+  const res = await api.get(url);
+  const table = document.getElementById('audit-table');
+  if (!table) return;
+
+  if (!res || !res.ok) {
+    table.innerHTML = `<div class="error-banner" style="margin:16px">${res?.data?.error?.message || 'Failed to load audit logs.'}</div>`;
+    return;
+  }
+
+  const logs = res.data.data || [];
+  const meta = res.data.meta?.pagination;
+  auditNextCursor = meta?.nextCursor || null;
+  const moreBtn = document.getElementById('audit-more');
+  if (moreBtn) moreBtn.style.display = meta?.hasMore ? 'block' : 'none';
+
+  if (!logs.length && !append) {
+    table.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">No audit logs found.</div>`;
+    return;
+  }
+
+  const rows = logs.map(log => `
+    <div class="audit-row">
+      <div style="font-family:monospace;font-size:11px;color:var(--text3);white-space:nowrap;flex-shrink:0;padding-top:2px">${fmtDate(log.createdAt)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;color:var(--text)">${log.action || '—'}</div>
+        <div style="color:var(--text3)">Entity: ${log.entity || '—'} ${log.entityId ? `· ID: <span style="font-family:monospace;font-size:11px">${log.entityId}</span>` : ''}</div>
+        ${log.userId ? `<div style="font-size:11px;color:var(--text3)">By user: ${log.userId}</div>` : ''}
+      </div>
+      ${log.changes ? `<div style="font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${JSON.stringify(log.changes)}</div>` : ''}
+    </div>`).join('');
+
+  if (append) {
+    table.insertAdjacentHTML('beforeend', rows);
+  } else {
+    table.innerHTML = rows;
+  }
+}
+
+function applyAuditFilter() { auditNextCursor = null; loadAuditLogs(); }
+function clearAuditFilter() {
+  document.getElementById('audit-action').value = '';
+  document.getElementById('audit-entity').value = '';
+  auditNextCursor = null;
+  loadAuditLogs();
+}
+function loadAuditMore() { loadAuditLogs(true); }
+
+// ── Action menus ──────────────────────────────────────────
+function toggleMenu(userId) {
+  const dropdown = document.getElementById(`dropdown-${userId}`);
+  document.querySelectorAll('.action-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+  dropdown.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.action-menu')) {
+    document.querySelectorAll('.action-dropdown.open').forEach(d => d.classList.remove('open'));
+  }
+});
+
+// ── Ban ───────────────────────────────────────────────────
+function openBanModal(userId, username) {
+  targetUserId   = userId;
+  targetUsername = username;
+  document.getElementById('ban-username').textContent = username;
   document.getElementById('ban-reason').value = '';
   showModal('modal-ban');
 }
-
-async function confirmBan() {
-  if (!banTarget) return;
+async function handleBanUser() {
   const reason = document.getElementById('ban-reason').value.trim();
-  if (!reason) { toast('Please provide a reason for the ban', 'error'); return; }
-  const res = await api.patch(`/admin/users/${banTarget.userId}/ban`, { reason });
-  toast(res && res.ok ? `${banTarget.username} has been banned.` : `${banTarget.username} banned (demo mode).`, 'info');
+  if (!reason) { toast('Please provide a reason', 'error'); return; }
+  const btn = document.getElementById('ban-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const res = await api.patch(`/admin/users/${targetUserId}/ban`, { reason });
+  btn.disabled = false; btn.innerHTML = 'Ban User';
+  if (!res || !res.ok) { toast(res?.data?.error?.message || 'Failed to ban user', 'error'); return; }
+  toast(`${targetUsername} has been banned.`, 'success');
   closeModal('modal-ban');
-  banTarget = null;
   loadUsers();
 }
+
+async function handleUnban(userId, username) {
+  if (!confirm(`Unban ${username}?`)) return;
+  const res = await api.patch(`/admin/users/${userId}/unban`);
+  if (!res || !res.ok) { toast(res?.data?.error?.message || 'Failed to unban', 'error'); return; }
+  toast(`${username} has been unbanned.`, 'success');
+  loadUsers();
+}
+
+// ── Role ──────────────────────────────────────────────────
+function openRoleModal(userId, username, currentRole) {
+  targetUserId   = userId;
+  targetUsername = username;
+  document.getElementById('role-username').textContent = username;
+  document.getElementById('role-select').value = currentRole;
+  showModal('modal-role');
+}
+async function handleChangeRole() {
+  const role = document.getElementById('role-select').value;
+  const btn  = document.getElementById('role-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const res  = await api.patch(`/admin/users/${targetUserId}/role`, { role });
+  btn.disabled = false; btn.innerHTML = 'Save Role';
+  if (!res || !res.ok) { toast(res?.data?.error?.message || 'Failed to change role', 'error'); return; }
+  toast(`${targetUsername}'s role changed to ${role}.`, 'success');
+  closeModal('modal-role');
+  loadUsers();
+}
+
+// Init modal overlays
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
 </script>
 </body>
 </html>

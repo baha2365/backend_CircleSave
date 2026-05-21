@@ -8,182 +8,583 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<style>
+  /* ── pending-approval banner ──────────────────────────────────────── */
+  .pending-banner{
+    background:var(--amber-l);border:1px solid #e8c96a;border-radius:var(--r12);
+    padding:16px 20px;margin-bottom:28px;display:flex;align-items:flex-start;gap:14px;
+  }
+  .pending-banner-icon{font-size:24px;flex-shrink:0;margin-top:2px}
+  .pending-banner h3{font-family:var(--ff-d);font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .pending-banner p{font-size:13px;color:var(--text2)}
+  .pending-member-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .pending-member-row{
+    display:flex;align-items:center;gap:10px;background:var(--surface);
+    border:1px solid var(--border);border-radius:var(--r8);padding:10px 14px;
+  }
+  .pending-member-ava{width:32px;height:32px;border-radius:50%;background:var(--accent-l);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .pending-member-info{flex:1;min-width:0}
+  .pending-member-name{font-size:13px;font-weight:600;color:var(--text)}
+  .pending-member-sub{font-size:11px;color:var(--text3)}
+  /* ── join-result card ─────────────────────────────────────────────── */
+  .join-result{
+    border-radius:var(--r12);padding:20px 24px;margin-top:4px;
+    text-align:center;border:1px solid;
+  }
+  .join-result.success{background:var(--green-l);border-color:var(--green)}
+  .join-result.error  {background:var(--red-l);  border-color:var(--red)}
+  /* ── circle-card organiser strip ─────────────────────────────────── */
+  .circle-org-strip{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+  }
+  .error-banner{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--red-l);border:1px solid #f5c2c2;border-radius:var(--r12);color:var(--red);font-size:14px;font-weight:500;margin-bottom:16px}
+</style>
 </head>
 <body>
 
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-
 <div id="app-layout">
-  <!-- SIDEBAR -->
-  <nav id="sidebar">
-    <div class="sidebar-logo">
-      <h1>Circle<span>Save</span></h1>
-      <p>Community savings platform</p>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Main</div>
-      <a href="dashboard.html"     class="nav-item" id="nav-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a href="circles.html"       class="nav-item" id="nav-circles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>My Circles</a>
-      <a href="payments.html"      class="nav-item" id="nav-payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</a>
-      <a href="notifications.html" class="nav-item" id="nav-notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications<span id="sidebar-notif-dot" style="display:none;width:6px;height:6px;background:var(--red);border-radius:50%;margin-left:auto"></span></a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Account</div>
-      <a href="profile.html" class="nav-item" id="nav-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
-      <a href="admin.html"   class="nav-item" id="nav-admin" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</a>
-    </div>
-    <div class="sidebar-user">
-      <div class="ava" id="sidebar-ava">?</div>
-      <div class="info"><div class="name" id="sidebar-name">Loading…</div><div class="role" id="sidebar-role">MEMBER</div></div>
-      <button class="btn-icon btn-ghost" title="Sign out" onclick="handleLogout()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
-    </div>
-  </nav>
-
-  <!-- MAIN -->
   <div id="main">
-    <header id="topbar">
-      <button class="topbar-menu" onclick="toggleSidebar()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-      <div class="topbar-title">My Circles</div>
-      <a href="notifications.html" class="notif-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-badge" id="notif-badge" style="display:none"></div></a>
-      <button class="btn btn-primary btn-sm" onclick="showModal('modal-create-circle')">+ New Circle</button>
-    </header>
-
     <div id="page" class="page-fade">
-      <div class="section-header">
+
+      <div class="section-header" style="margin-bottom:24px">
         <h2 class="section-title">My Circles</h2>
         <div style="display:flex;gap:10px">
-          <button class="btn btn-secondary btn-sm" onclick="showModal('modal-join-circle')">Join Circle</button>
-          <button class="btn btn-primary   btn-sm" onclick="showModal('modal-create-circle')">+ Create Circle</button>
+          <button class="btn btn-secondary btn-sm" onclick="showModal('modal-join')">🔗 Join with code</button>
+          <button class="btn btn-primary   btn-sm" onclick="showModal('modal-create')">+ Create Circle</button>
         </div>
       </div>
+
+      <!-- Pending-member approvals (organiser view, injected dynamically) -->
+      <div id="pending-approvals-wrap"></div>
+
+      <!-- Circle grid -->
       <div id="circles-grid" class="circles-grid">
-        <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+        <div style="grid-column:1/-1;text-align:center;padding:60px">
+          <div class="spinner spinner-dark" style="display:inline-block"></div>
+          <div style="margin-top:12px;color:var(--text3);font-size:14px">Loading your circles…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── JOIN CIRCLE MODAL ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-join">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Join a Circle</div>
+      <button class="modal-close" onclick="closeModal('modal-join')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div id="join-step-input">
+      <div style="font-size:14px;color:var(--text3);margin-bottom:20px">
+        Enter the invite code shared by the circle organiser. Your request will be sent for approval.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invite code</label>
+        <input type="text" class="form-input" id="join-code"
+          placeholder="e.g. inv-fam-001"
+          style="font-family:monospace;letter-spacing:1px"
+          onkeydown="if(event.key==='Enter') handleJoinCircle()">
+      </div>
+      <div id="join-inline-error" style="display:none" class="form-error"></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-join')">Cancel</button>
+        <button class="btn btn-primary"   style="flex:1" id="join-submit-btn" onclick="handleJoinCircle()">Send Join Request</button>
       </div>
     </div>
+
+    <!-- success / already-member state shown here -->
+    <div id="join-step-result" style="display:none"></div>
   </div>
 </div>
 
-<!-- BOTTOM NAV -->
-<div id="bottom-nav">
-  <a href="dashboard.html"     class="bnav-item" id="bnav-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Home</a>
-  <a href="circles.html"       class="bnav-item" id="bnav-circles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>Circles</a>
-  <a href="payments.html"      class="bnav-item" id="bnav-payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payments</a>
-  <a href="profile.html"       class="bnav-item" id="bnav-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
-</div>
-
-<!-- CREATE CIRCLE MODAL -->
-<div class="modal-overlay" id="modal-create-circle">
+<!-- ── CREATE CIRCLE MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-create">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Create a New Circle</div><button class="modal-close" onclick="closeModal('modal-create-circle')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="form-group"><label class="form-label">Circle name</label><input type="text" class="form-input" id="cc-name" placeholder="Family Savings Group"></div>
-    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="cc-desc" rows="3" placeholder="What is this circle for?"></textarea></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Contribution amount</label><input type="number" class="form-input" id="cc-amount" placeholder="500" min="1"></div>
-      <div class="form-group"><label class="form-label">Currency</label><select class="form-select" id="cc-currency"><option>USD</option><option>EUR</option><option>KZT</option><option>GBP</option><option>RUB</option></select></div>
+    <div class="modal-header">
+      <div class="modal-title">Create a New Circle</div>
+      <button class="modal-close" onclick="closeModal('modal-create')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Circle name <span style="color:var(--red)">*</span></label>
+      <input type="text" class="form-input" id="cc-name" placeholder="Family Savings Group">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="cc-desc" rows="2" placeholder="What is this circle for?"></textarea>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Max members</label><input type="number" class="form-input" id="cc-max" placeholder="8" min="2" max="100"></div>
-      <div class="form-group"><label class="form-label">Frequency (days)</label><input type="number" class="form-input" id="cc-freq" placeholder="30" min="1" value="30"></div>
+      <div class="form-group">
+        <label class="form-label">Contribution amount <span style="color:var(--red)">*</span></label>
+        <input type="number" class="form-input" id="cc-amount" placeholder="500" min="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Currency</label>
+        <select class="form-select" id="cc-currency">
+          <option>USD</option><option>EUR</option><option>KZT</option><option>GBP</option><option>RUB</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Max members <span style="color:var(--red)">*</span></label>
+        <input type="number" class="form-input" id="cc-max" placeholder="8" min="2" max="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Frequency (days) <span style="color:var(--red)">*</span></label>
+        <input type="number" class="form-input" id="cc-freq" placeholder="30" min="1" value="30">
+      </div>
+    </div>
+    <div id="create-inline-error" style="display:none" class="form-error" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-create')">Cancel</button>
+      <button class="btn btn-primary"   style="flex:1" id="create-submit-btn" onclick="handleCreateCircle()">Create Circle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ACTIVATE CIRCLE MODAL ───────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-activate">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Activate Circle</div>
+      <button class="modal-close" onclick="closeModal('modal-activate')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="background:var(--green-l);border:1px solid var(--green);border-radius:var(--r8);padding:12px 16px;font-size:13px;color:var(--green-h);margin-bottom:20px">
+      ✅ Activating will assign rotation order and begin the savings cycle. All approved members will be notified.
+    </div>
+    <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:16px">
+      Circle: <strong id="activate-circle-name"></strong>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Start date <span style="color:var(--red)">*</span></label>
+      <input type="date" class="form-input" id="activate-start-date">
+      <div class="form-hint">The date of the first contribution round</div>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-create-circle')">Cancel</button>
-      <button class="btn btn-primary"   style="flex:1" onclick="handleCreateCircle()">Create Circle</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-activate')">Cancel</button>
+      <button class="btn btn-green"     style="flex:1" id="activate-submit-btn" onclick="handleActivateCircle()">
+        ⚡ Activate Now
+      </button>
     </div>
   </div>
 </div>
 
-<!-- JOIN CIRCLE MODAL -->
-<div class="modal-overlay" id="modal-join-circle">
+<!-- ── DISSOLVE CIRCLE MODAL ───────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-dissolve">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Join a Circle</div><button class="modal-close" onclick="closeModal('modal-join-circle')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div style="margin-bottom:20px;color:var(--text3);font-size:14px">Enter the invite code shared by your circle organiser.</div>
-    <div class="form-group"><label class="form-label">Invite code</label><input type="text" class="form-input" id="join-code" placeholder="inv-fam-001" style="font-family:monospace;font-size:13px"></div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-join-circle')">Cancel</button>
-      <button class="btn btn-primary"   style="flex:1" onclick="handleJoinCircle()">Request to Join</button>
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red)">Dissolve Circle</div>
+      <button class="modal-close" onclick="closeModal('modal-dissolve')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="background:var(--red-l);border:1px solid #f5c2c2;border-radius:var(--r8);padding:12px 16px;font-size:13px;color:var(--red);margin-bottom:16px">
+      ⚠️ This cannot be undone. The circle will be permanently closed and all members notified.
+    </div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:20px">
+      Are you sure you want to dissolve <strong id="dissolve-circle-name"></strong>?
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-dissolve')">Cancel</button>
+      <button class="btn btn-danger"    style="flex:1" id="dissolve-submit-btn" onclick="handleDissolveCircle()">
+        Yes, Dissolve
+      </button>
     </div>
   </div>
 </div>
-
-<div id="toast-container"></div>
 
 <script src="js/shared.js"></script>
+<script src="js/app-shell.js"></script>
 <script>
-(function () {
-  const user = requireAuth();
-  if (!user) return;
-  updateSidebarUser(user);
-  initNav();
-  checkNotifBadge();
-  loadCircles();
-  initModalOverlays();
+// ── State ────────────────────────────────────────────────
+let pageUser     = null;
+let allCircles   = [];
+let targetCircle = null;  // circle being activated / dissolved
+
+// ── Boot ─────────────────────────────────────────────────
+(async function boot() {
+  pageUser = initShell({
+    title: 'My Circles',
+    actionHtml: `
+      <button class="btn btn-secondary btn-sm" onclick="showModal('modal-join')">🔗 Join</button>
+      <button class="btn btn-primary   btn-sm" onclick="showModal('modal-create')">+ Create</button>
+    `,
+  });
+  if (!pageUser) return;
+
+  // Reset join modal state whenever it opens
+  document.getElementById('modal-join').addEventListener('transitionend', resetJoinModal);
+
+  await loadCircles();
 })();
 
+// ── Load circles ──────────────────────────────────────────
 async function loadCircles() {
-  let circles = DEMO.circles;
   const res = await api.get('/circles');
-  if (res && res.ok && res.data.data) circles = res.data.data;
 
-  if (!circles.length) {
+  if (!res || !res.ok) {
     document.getElementById('circles-grid').innerHTML = `
-      <div style="grid-column:1/-1" class="empty-state">
-        <div class="empty-icon">⭕</div>
-        <div class="empty-title">No circles yet</div>
-        <div class="empty-desc">Create your first circle or join one with an invite code.</div>
-        <div style="display:flex;gap:10px;justify-content:center">
-          <button class="btn btn-outline" onclick="showModal('modal-join-circle')">Join Circle</button>
-          <button class="btn btn-primary" onclick="showModal('modal-create-circle')">Create Circle</button>
+      <div style="grid-column:1/-1">
+        <div class="error-banner">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ${res?.data?.error?.message || 'Failed to load circles. Please refresh.'}
         </div>
       </div>`;
     return;
   }
-  document.getElementById('circles-grid').innerHTML = circles.map(circleCard).join('');
+
+  allCircles = res.data.data || [];
+  renderPendingApprovals();
+  renderCircleGrid();
+}
+
+// ── Pending-approval banner ───────────────────────────────
+// Organizer status is per-circle (c.isOrganizer from the API), NOT a global
+// role. Global ADMIN can also manage all circles.
+async function renderPendingApprovals() {
+  const isAdmin = pageUser.role === 'ADMIN';
+
+  // Filter to circles this user organises (or all if admin), in an open status
+  const managed = allCircles.filter(c =>
+    (c.isOrganizer || isAdmin) && (c.status === 'PENDING' || c.status === 'ACTIVE')
+  );
+
+  if (!managed.length) { document.getElementById('pending-approvals-wrap').innerHTML = ''; return; }
+
+  // Fetch each circle to get member lists (parallel)
+  const details = await Promise.all(managed.map(c => api.get(`/circles/${c.id}`)));
+
+  let pendingRows = [];
+  details.forEach((res, i) => {
+    if (!res || !res.ok) return;
+    const raw = res.data.data;
+    // API returns { circle: { ...fields, members: [...] } }
+    const circle  = raw.circle || raw;
+    const members = circle.members || [];
+    const pending = members.filter(m => m.status === 'PENDING');
+    pending.forEach(m => pendingRows.push({ circle: managed[i], member: m }));
+  });
+
+  const wrap = document.getElementById('pending-approvals-wrap');
+  if (!pendingRows.length) { wrap.innerHTML = ''; return; }
+
+  wrap.innerHTML = `
+    <div class="pending-banner">
+      <div class="pending-banner-icon">👥</div>
+      <div style="flex:1">
+        <h3>Member requests awaiting approval</h3>
+        <p>${pendingRows.length} member${pendingRows.length !== 1 ? 's' : ''} want${pendingRows.length === 1 ? 's' : ''} to join your circle${pendingRows.length > 1 ? 's' : ''}.</p>
+        <div class="pending-member-list">
+          ${pendingRows.map(({ circle, member }) => {
+            // Member objects nest user info under member.user
+            const username   = member.user?.username   || member.username   || '?';
+            const trustScore = member.user?.trustScore ?? member.trustScore ?? '—';
+            return `
+            <div class="pending-member-row" id="pmrow-${member.id}">
+              <div class="pending-member-ava">${username.slice(0, 2).toUpperCase()}</div>
+              <div class="pending-member-info">
+                <div class="pending-member-name">${username}</div>
+                <div class="pending-member-sub">Wants to join <strong>${circle.name}</strong> · Trust: ${trustScore}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn btn-green  btn-sm" onclick="handleMemberApproval('${circle.id}','${member.id}','approve')">Approve</button>
+                <button class="btn btn-danger btn-sm" onclick="handleMemberApproval('${circle.id}','${member.id}','reject')">Reject</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Circle grid ───────────────────────────────────────────
+function renderCircleGrid() {
+  if (!allCircles.length) {
+    document.getElementById('circles-grid').innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 20px">
+        <div style="font-size:48px;margin-bottom:16px">⭕</div>
+        <div style="font-family:var(--ff-d);font-size:24px;font-weight:700;margin-bottom:8px">No circles yet</div>
+        <div style="color:var(--text3);font-size:14px;margin-bottom:24px">
+          Create your first savings circle or join one with an invite code.
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="showModal('modal-join')">🔗 Join with code</button>
+          <button class="btn btn-primary" onclick="showModal('modal-create')">+ Create Circle</button>
+        </div>
+      </div>`;
+    return;
+  }
+  document.getElementById('circles-grid').innerHTML = allCircles.map(circleCard).join('');
 }
 
 function circleCard(c) {
-  const pct = c.totalRounds ? Math.round((c.currentRound / c.totalRounds) * 100) : 0;
-  return `<a href="circle-detail.html?id=${c.id}" class="circle-card">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-      <div class="circle-name">${c.name}</div>
-      <div class="badge badge-${statusBadge(c.status)}">${c.status}</div>
-    </div>
-    <div class="circle-desc">${c.description || 'No description'}</div>
-    <div class="circle-meta">
-      <div class="circle-meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>${c.currentMembers}/${c.maxMembers}</div>
-      <div class="circle-meta-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Every ${c.frequencyDays} days</div>
-      ${c.nextPaymentDate ? `<div class="circle-meta-item">Next: ${fmtDate(c.nextPaymentDate)}</div>` : ''}
-    </div>
-    <div class="circle-amount">${c.contributionAmount.toLocaleString()} <span>${c.currency}/member</span></div>
-    ${c.status === 'ACTIVE' ? `
-    <div class="circle-progress">
-      <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
-      <div class="progress-label"><span>Round ${c.currentRound} of ${c.totalRounds}</span><span>${pct}%</span></div>
-    </div>` : ''}
-  </a>`;
+  const pct    = c.totalRounds ? Math.round((c.currentRound / c.totalRounds) * 100) : 0;
+  // Use per-circle isOrganizer flag (set by the API), not a global role
+  const isOrg  = c.isOrganizer || pageUser.role === 'ADMIN';
+  const canAct = isOrg && (c.status === 'PENDING' || c.status === 'ACTIVE');
+
+  // Organiser action strip (only visible to organisers on actionable circles)
+  const orgStrip = canAct ? `
+    <div class="circle-org-strip">
+      <span style="font-size:11px;color:var(--text3);font-weight:500;margin-right:4px">Organiser:</span>
+      ${c.status === 'PENDING' ? `
+        <button class="btn btn-green btn-sm"
+          onclick="event.preventDefault();event.stopPropagation();openActivateModal('${c.id}','${escHtml(c.name)}')">
+          ⚡ Activate
+        </button>` : ''}
+      ${c.status === 'ACTIVE' ? `
+        <a href="circle-detail.html?id=${c.id}&tab=members" class="btn btn-secondary btn-sm"
+          onclick="event.stopPropagation()">
+          👥 Members
+        </a>` : ''}
+      <button class="btn btn-danger btn-sm"
+        onclick="event.preventDefault();event.stopPropagation();openDissolveModal('${c.id}','${escHtml(c.name)}')">
+        Dissolve
+      </button>
+    </div>` : '';
+
+  return `
+    <a href="circle-detail.html?id=${c.id}" class="circle-card" style="display:block;text-decoration:none">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div class="circle-name">${c.name}</div>
+        <div class="badge badge-${statusBadge(c.status)}">${c.status}</div>
+      </div>
+      <div class="circle-desc">${c.description || 'No description'}</div>
+      <div class="circle-meta">
+        <div class="circle-meta-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ${c.currentMembers}/${c.maxMembers}
+        </div>
+        <div class="circle-meta-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Every ${c.frequencyDays} days
+        </div>
+        ${c.nextPaymentDate ? `<div class="circle-meta-item">Next: ${fmtDate(c.nextPaymentDate)}</div>` : ''}
+      </div>
+      <div class="circle-amount">${c.contributionAmount.toLocaleString()} <span>${c.currency}/member</span></div>
+      ${c.status === 'ACTIVE' && c.totalRounds ? `
+        <div class="circle-progress">
+          <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <div class="progress-label"><span>Round ${c.currentRound} of ${c.totalRounds}</span><span>${pct}%</span></div>
+        </div>` : ''}
+      ${orgStrip}
+    </a>`;
 }
 
-async function handleCreateCircle() {
-  const name              = document.getElementById('cc-name').value.trim();
-  const description       = document.getElementById('cc-desc').value.trim();
-  const contributionAmount = parseFloat(document.getElementById('cc-amount').value);
-  const currency          = document.getElementById('cc-currency').value;
-  const maxMembers        = parseInt(document.getElementById('cc-max').value);
-  const frequencyDays     = parseInt(document.getElementById('cc-freq').value);
-  if (!name || !contributionAmount || !maxMembers || !frequencyDays) { toast('Please fill all required fields', 'error'); return; }
-
-  const res = await api.post('/circles', { name, description, contributionAmount, currency, maxMembers, frequencyDays });
-  toast(res && res.ok ? 'Circle created!' : 'Circle created (demo mode)', res && res.ok ? 'success' : 'info');
-  closeModal('modal-create-circle');
-  loadCircles();
+// ── JOIN CIRCLE ───────────────────────────────────────────
+function resetJoinModal() {
+  if (!document.getElementById('modal-join').classList.contains('open')) {
+    document.getElementById('join-step-input').style.display  = 'block';
+    document.getElementById('join-step-result').style.display = 'none';
+    document.getElementById('join-code').value = '';
+    document.getElementById('join-inline-error').style.display = 'none';
+    document.getElementById('join-inline-error').textContent  = '';
+    const btn = document.getElementById('join-submit-btn');
+    btn.disabled = false; btn.innerHTML = 'Send Join Request';
+  }
 }
 
 async function handleJoinCircle() {
   const inviteCode = document.getElementById('join-code').value.trim();
-  if (!inviteCode) { toast('Please enter an invite code', 'error'); return; }
+  const errEl      = document.getElementById('join-inline-error');
+  errEl.style.display = 'none';
+
+  if (!inviteCode) {
+    errEl.textContent = 'Please enter an invite code.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('join-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending…';
+
   const res = await api.post('/circles/join', { inviteCode });
-  toast(res && res.ok ? 'Join request submitted!' : 'Join request submitted (demo mode)', 'info');
-  closeModal('modal-join-circle');
+
+  btn.disabled = false;
+  btn.innerHTML = 'Send Join Request';
+
+  // ── Success ──────────────────────────────────────────────
+  if (res && res.ok && res.data.success) {
+    document.getElementById('join-step-input').style.display  = 'none';
+    document.getElementById('join-step-result').style.display = 'block';
+    document.getElementById('join-step-result').innerHTML = `
+      <div class="join-result success">
+        <div style="font-size:36px;margin-bottom:10px">🎉</div>
+        <div style="font-family:var(--ff-d);font-size:18px;font-weight:700;color:var(--green-h);margin-bottom:6px">
+          Request sent!
+        </div>
+        <div style="font-size:14px;color:var(--text2)">
+          Your join request has been submitted. The organiser will review it shortly.
+          You'll get a notification once you're approved.
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:16px" onclick="closeModal('modal-join')">
+          Close
+        </button>
+      </div>`;
+    return;
+  }
+
+  // ── API errors ───────────────────────────────────────────
+  const code    = res?.data?.error?.code    || '';
+  const message = res?.data?.error?.message || 'Something went wrong. Please try again.';
+
+  // Already a member → show friendly state instead of inline error
+  if (code === 'CIRCLE_ALREADY_MEMBER') {
+    document.getElementById('join-step-input').style.display  = 'none';
+    document.getElementById('join-step-result').style.display = 'block';
+    document.getElementById('join-step-result').innerHTML = `
+      <div class="join-result error">
+        <div style="font-size:36px;margin-bottom:10px">ℹ️</div>
+        <div style="font-family:var(--ff-d);font-size:17px;font-weight:700;color:var(--red);margin-bottom:6px">
+          Already a member
+        </div>
+        <div style="font-size:14px;color:var(--text2)">
+          You are already a member (or have a pending request) for this circle.
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:16px" onclick="closeModal('modal-join')">
+          Close
+        </button>
+      </div>`;
+    return;
+  }
+
+  // Circle not found or other error → inline error
+  errEl.textContent   = message;
+  errEl.style.display = 'block';
 }
+
+// ── CREATE CIRCLE ─────────────────────────────────────────
+async function handleCreateCircle() {
+  const name             = document.getElementById('cc-name').value.trim();
+  const description      = document.getElementById('cc-desc').value.trim();
+  const contributionAmount = parseFloat(document.getElementById('cc-amount').value);
+  const currency         = document.getElementById('cc-currency').value;
+  const maxMembers       = parseInt(document.getElementById('cc-max').value);
+  const frequencyDays    = parseInt(document.getElementById('cc-freq').value);
+  if (!name || !contributionAmount || !maxMembers || !frequencyDays) { toast('Please fill all required fields', 'error'); return; }
+
+  const res = await api.post('/circles', { name, description, contributionAmount, currency, maxMembers, frequencyDays });
+  if (res && res.ok && res.data.success) {
+    toast('Circle created!', 'success');
+  } else {
+    toast('Circle created (demo mode)', 'info');
+  }
+  closeModal('modal-create-circle');
+  setTimeout(() => window.location.href = 'circles.html', 800);
+}
+
+// ── ACTIVATE CIRCLE ───────────────────────────────────────
+function openActivateModal(circleId, circleName) {
+  targetCircle = { id: circleId, name: circleName };
+  document.getElementById('activate-circle-name').textContent    = circleName;
+  document.getElementById('activate-start-date').value           = new Date().toISOString().split('T')[0];
+  document.getElementById('activate-submit-btn').disabled        = false;
+  document.getElementById('activate-submit-btn').innerHTML       = '⚡ Activate Now';
+  showModal('modal-activate');
+}
+
+async function handleActivateCircle() {
+  const startDate = document.getElementById('activate-start-date').value;
+  if (!startDate) { toast('Please select a start date', 'error'); return; }
+
+  const btn = document.getElementById('activate-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Activating…';
+
+  const res = await api.post(`/circles/${targetCircle.id}/activate`, {
+    startDate: new Date(startDate).toISOString(),
+  });
+
+  btn.disabled = false; btn.innerHTML = '⚡ Activate Now';
+
+  if (!res || !res.ok) {
+    toast(res?.data?.error?.message || 'Failed to activate circle.', 'error');
+    return;
+  }
+
+  toast(`"${targetCircle.name}" is now active! Rotation has been assigned.`, 'success');
+  closeModal('modal-activate');
+  await loadCircles();
+}
+
+// ── DISSOLVE CIRCLE ───────────────────────────────────────
+function openDissolveModal(circleId, circleName) {
+  targetCircle = { id: circleId, name: circleName };
+  document.getElementById('dissolve-circle-name').textContent = circleName;
+  document.getElementById('dissolve-submit-btn').disabled     = false;
+  document.getElementById('dissolve-submit-btn').innerHTML    = 'Yes, Dissolve';
+  showModal('modal-dissolve');
+}
+
+async function handleDissolveCircle() {
+  const btn = document.getElementById('dissolve-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Dissolving…';
+
+  const res = await api.post(`/circles/${targetCircle.id}/dissolve`);
+
+  btn.disabled = false; btn.innerHTML = 'Yes, Dissolve';
+
+  if (!res || !res.ok) {
+    toast(res?.data?.error?.message || 'Failed to dissolve circle.', 'error');
+    return;
+  }
+
+  toast(`"${targetCircle.name}" has been dissolved.`, 'info');
+  closeModal('modal-dissolve');
+  await loadCircles();
+}
+
+// ── APPROVE / REJECT MEMBER ───────────────────────────────
+async function handleMemberApproval(circleId, memberId, action) {
+  const row = document.getElementById(`pmrow-${memberId}`);
+  if (row) {
+    // Disable both buttons immediately to prevent double-click
+    row.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    const activeBtn = row.querySelector(`.btn-${action === 'approve' ? 'green' : 'danger'}`);
+    if (activeBtn) activeBtn.innerHTML = '<span class="spinner spinner-dark" style="width:14px;height:14px"></span>';
+  }
+
+  const res = await api.patch(`/circles/${circleId}/members/${memberId}/${action}`);
+
+  if (!res || !res.ok) {
+    toast(res?.data?.error?.message || `Failed to ${action} member.`, 'error');
+    // Re-enable buttons
+    if (row) row.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    return;
+  }
+
+  toast(action === 'approve' ? 'Member approved! They can now participate.' : 'Member request rejected.', action === 'approve' ? 'success' : 'info');
+
+  // Animate row out then refresh
+  if (row) {
+    row.style.transition = 'opacity .3s, transform .3s';
+    row.style.opacity    = '0';
+    row.style.transform  = 'translateX(20px)';
+    setTimeout(() => loadCircles(), 350);
+  } else {
+    await loadCircles();
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+// Init modals
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
 </script>
 </body>
 </html>
