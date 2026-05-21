@@ -1,5 +1,9 @@
 version: '3.9'
 
+networks:
+  baha2365-backend-circlesave-net:
+    driver: bridge
+
 services:
   frontend:
     build: ./frontend
@@ -8,6 +12,8 @@ services:
       - "80:80"
     depends_on:
       - backend
+    networks:
+      - baha2365-backend-circlesave-net
 
   backend:
     build: .
@@ -23,18 +29,21 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:123@postgres:5432/CircleSave
       REDIS_URL: redis://redis:6379
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3000
       JWT_ACCESS_SECRET: super_secret_access_key_very_long_123456
       JWT_REFRESH_SECRET: super_secret_refresh_key_very_long_654321
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       API_VERSION: v1
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost,https://baha2365-backend-circlesave-frontend.kazi.rocks
+      CORS_ORIGINS: http://localhost:3000,http://localhost,https://baha2365-backend-circlesave-frontend.kazi.rocks
+      FRONTEND_URL: https://baha2365-backend-circlesave-frontend.kazi.rocks
     volumes:
       - .:/app
       - /app/node_modules
     command: sh -c "npx prisma generate && npx prisma migrate deploy && node src/server.js"
+    networks:
+      - baha2365-backend-circlesave-net
 
   postgres:
     image: postgres:16
@@ -48,17 +57,20 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d CircleSave"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - baha2365-backend-circlesave-net
 
   redis:
     image: redis:7
     container_name: circlesave-redis
     restart: always
+    networks:
+      - baha2365-backend-circlesave-net
 
 volumes:
   pgdata:
