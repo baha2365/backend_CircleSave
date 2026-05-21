@@ -1,6 +1,14 @@
 version: '3.9'
 
 services:
+  frontend:
+    build: ./frontend
+    container_name: circlesave-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
   backend:
     build: .
     container_name: circlesave-backend
