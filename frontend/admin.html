@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app-layout">
+  <div id="main">
+    <div id="page" class="page-fade">
+
+      <div style="margin-bottom:28px">
+        <h2 class="section-title">Admin Dashboard</h2>
+        <p style="color:var(--text3);font-size:14px">Platform-wide statistics and management</p>
+      </div>
+
+      <!-- Platform stats -->
+      <div class="admin-grid" id="admin-stats">
+        <div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+      </div>
+
+      <!-- Revenue chart placeholder -->
+      <div class="card" style="margin-bottom:24px" id="revenue-card" style="display:none">
+        <div class="card-header">
+          <div class="card-title">Revenue Overview</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" id="rev-btn-30"   onclick="setRevPeriod(30)"  >30 days</button>
+            <button class="btn btn-secondary btn-sm" id="rev-btn-90" onclick="setRevPeriod(90)">90 days</button>
+          </div>
+        </div>
+        <div id="revenue-chart" style="height:120px;display:flex;align-items:flex-end;gap:4px;padding:4px 0"></div>
+      </div>
+
+      <!-- Management grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+        <!-- Users -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Users</div>
+              <div class="card-subtitle" id="users-count">—</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input type="text" class="form-input" id="user-search" placeholder="Search…" style="width:120px;padding:7px 10px;font-size:13px" oninput="filterUsers(this.value)">
+              <button class="btn btn-secondary btn-sm" onclick="loadUsers()">↻</button>
+            </div>
+          </div>
+          <div id="admin-users-list"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
+        </div>
+
+        <!-- Circles -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">All Circles</div>
+              <div class="card-subtitle" id="circles-count">—</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <select class="form-select" id="circle-status-filter" style="width:auto;font-size:13px;padding:7px 10px" onchange="filterCircles(this.value)">
+                <option value="">All</option>
+                <option value="ACTIVE">Active</option>
+                <option value="PENDING">Pending</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="DISSOLVED">Dissolved</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="loadCircles()">↻</button>
+            </div>
+          </div>
+          <div id="admin-circles-list"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Recent Platform Activity</div>
+          <button class="btn btn-secondary btn-sm" onclick="loadActivity()">↻ Refresh</button>
+        </div>
+        <div id="admin-activity"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- BAN USER MODAL -->
+<div class="modal-overlay" id="modal-ban">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Ban User</div>
+      <button class="modal-close" onclick="closeModal('modal-ban')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="margin-bottom:16px;color:var(--text3);font-size:14px">Banning a user will revoke their access and notify them via email.</div>
+    <div id="ban-user-info" style="background:var(--bg2);border-radius:var(--r8);padding:12px;margin-bottom:16px;font-size:13px"></div>
+    <div class="form-group">
+      <label class="form-label">Reason for ban</label>
+      <textarea class="form-input" id="ban-reason" rows="3" placeholder="Repeated late payments, suspicious activity…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-ban')">Cancel</button>
+      <button class="btn btn-danger"    style="flex:1" onclick="confirmBan()">Confirm Ban</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/app-shell.js"></script>
+<script>
+// ── Boot ───────────────────────────────────────────────
+const pageUser = initShell({ title: 'Admin Dashboard' });
+
+if (pageUser) {
+  // Redirect non-admins
+  if (pageUser.role !== 'ADMIN') {
+    toast('Access denied — Admins only', 'error');
+    setTimeout(() => window.location.href = 'dashboard.html', 1200);
+  } else {
+    loadAdmin();
+    initModalOverlays();
+  }
+}
+
+// ── State ──────────────────────────────────────────────
+let allUsers   = [];
+let allCircles = [];
+let banTarget  = null;
+
+// ── Main load ──────────────────────────────────────────
+async function loadAdmin() {
+  const [statsRes] = await Promise.all([
+    api.get('/admin/dashboard'),
+  ]);
+  const stats = (statsRes && statsRes.ok && statsRes.data.data) ? statsRes.data.data : DEMO.adminStats;
+  renderStats(stats);
+  renderRevenueChart(stats);
+  loadUsers();
+  loadCircles();
+  loadActivity();
+}
+
+// ── Stats ──────────────────────────────────────────────
+function renderStats(s) {
+  const items = [
+    { label: 'Total Users',       val: s.totalUsers,      icon: '👥', color: '#1E6090' },
+    { label: 'Total Circles',     val: s.totalCircles,    icon: '⭕', color: '#C4522A' },
+    { label: 'Active Circles',    val: s.activeCircles,   icon: '✅', color: '#2A6040' },
+    { label: 'Completed Circles', val: s.completedCircles,icon: '🎉', color: '#2A6040' },
+    { label: 'Total Payments',    val: s.totalPayments?.toLocaleString(),    icon: '💳', color: '#C87D10' },
+    { label: 'Total Revenue',     val: '$' + (s.totalRevenue || 0).toLocaleString(), icon: '💰', color: '#2A6040' },
+    { label: 'Banned Users',      val: s.bannedUsers,     icon: '🚫', color: '#C42828' },
+  ];
+  document.getElementById('admin-stats').innerHTML = items.map(i => `
+    <div class="stat-card">
+      <div style="font-size:28px;margin-bottom:8px">${i.icon}</div>
+      <div class="stat-label">${i.label}</div>
+      <div class="stat-val" style="color:${i.color}">${i.val ?? '—'}</div>
+    </div>`).join('');
+}
+
+// ── Revenue chart ──────────────────────────────────────
+function renderRevenueChart(stats) {
+  // Fake sparkline data based on stats
+  const bars = Array.from({ length: 12 }, (_, i) => Math.floor(Math.random() * 80 + 20));
+  const max  = Math.max(...bars);
+  document.getElementById('revenue-chart').innerHTML = bars.map((v, i) => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="width:100%;background:${i === bars.length-1 ? 'var(--accent)' : 'var(--border)'};border-radius:2px 2px 0 0;height:${Math.round((v/max)*100)}px;transition:.3s"></div>
+    </div>`).join('');
+  document.getElementById('revenue-card').style.display = 'block';
+}
+
+function setRevPeriod(days) {
+  ['30','90'].forEach(d => {
+    document.getElementById('rev-btn-'+d).className = d == days ? 'btn btn-secondary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  renderRevenueChart(DEMO.adminStats); // refresh with new data
+}
+
+// ── Users ──────────────────────────────────────────────
+async function loadUsers() {
+  document.getElementById('admin-users-list').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
+  const res = await api.get('/admin/users');
+  allUsers  = (res && res.ok && res.data.data) ? res.data.data : DEMO.adminUsers;
+  document.getElementById('users-count').textContent = `${allUsers.length} total users`;
+  renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+  if (!users.length) {
+    document.getElementById('admin-users-list').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No users found.</div></div>';
+    return;
+  }
+  document.getElementById('admin-users-list').innerHTML = users.slice(0, 10).map(u => `
+    <div class="member-row" style="margin-bottom:6px">
+      <div class="member-ava" style="background:${u.role==='ADMIN'?'var(--red-l)':u.role==='ORGANIZER'?'var(--accent-l)':'var(--blue-l)'};color:${u.role==='ADMIN'?'var(--red)':u.role==='ORGANIZER'?'var(--accent)':'var(--blue)'}">
+        ${(u.username || '?').slice(0, 2).toUpperCase()}
+      </div>
+      <div class="member-info">
+        <div class="member-name">${u.username}</div>
+        <div class="member-detail">${u.email} · Score: ${u.trustScore ?? '—'}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <div class="badge badge-${roleBadge(u.role)}" style="font-size:10px">${u.role}</div>
+        ${u.role !== 'ADMIN' ? `
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px;color:var(--red)" onclick="openBan('${u.id}','${u.username}','${u.email}')">Ban</button>` : ''}
+      </div>
+    </div>`).join('') +
+    (users.length > 10 ? `<div style="text-align:center;padding:12px;font-size:13px;color:var(--text3)">${users.length - 10} more users…</div>` : '');
+}
+
+function filterUsers(query) {
+  const q = query.toLowerCase();
+  renderUsers(q ? allUsers.filter(u => u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) : allUsers);
+}
+
+// ── Circles ────────────────────────────────────────────
+async function loadCircles() {
+  document.getElementById('admin-circles-list').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
+  const res  = await api.get('/admin/circles');
+  allCircles = (res && res.ok && res.data.data) ? res.data.data : DEMO.circles;
+  document.getElementById('circles-count').textContent = `${allCircles.length} total circles`;
+  renderCircles(allCircles);
+}
+
+function renderCircles(circles) {
+  if (!circles.length) {
+    document.getElementById('admin-circles-list').innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-desc">No circles found.</div></div>';
+    return;
+  }
+  document.getElementById('admin-circles-list').innerHTML = circles.map(c => `
+    <a href="circle-detail.html?id=${c.id}" class="member-row" style="margin-bottom:6px;cursor:pointer">
+      <div style="width:10px;height:10px;border-radius:50%;background:${statusColor(c.status)};flex-shrink:0"></div>
+      <div class="member-info">
+        <div class="member-name">${c.name}</div>
+        <div class="member-detail">${c.currentMembers}/${c.maxMembers} members · ${c.contributionAmount} ${c.currency} · Round ${c.currentRound || 0}</div>
+      </div>
+      <div class="badge badge-${statusBadge(c.status)}" style="font-size:10px;flex-shrink:0">${c.status}</div>
+    </a>`).join('');
+}
+
+function filterCircles(status) {
+  renderCircles(status ? allCircles.filter(c => c.status === status) : allCircles);
+}
+
+// ── Activity ───────────────────────────────────────────
+async function loadActivity() {
+  document.getElementById('admin-activity').innerHTML = '<div class="spinner spinner-dark" style="display:block;margin:20px auto"></div>';
+  // Use demo payments/notifs as activity proxy
+  const activities = [
+    ...DEMO.payments.map(p => ({ type: 'PAYMENT', icon: '💳', color: 'var(--green)',  text: `${p.circleName} — ${p.currency}${p.amount} payment (${p.status})`,   date: p.createdAt })),
+    ...DEMO.notifications.map(n => ({ type: 'EVENT',   icon: '🔔', color: 'var(--blue)', text: n.data?.body || 'Platform event', date: n.createdAt })),
+  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 12);
+
+  document.getElementById('admin-activity').innerHTML = activities.map(a => `
+    <div class="ledger-row">
+      <div style="width:32px;height:32px;border-radius:50%;background:${a.color}18;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${a.icon}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${a.text}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)}</div>
+      </div>
+      <div class="badge badge-${a.type === 'PAYMENT' ? 'green' : 'blue'}" style="font-size:10px">${a.type}</div>
+    </div>`).join('');
+}
+
+// ── Ban ────────────────────────────────────────────────
+function openBan(userId, username, email) {
+  banTarget = { userId, username, email };
+  document.getElementById('ban-user-info').innerHTML = `<strong>${username}</strong> &nbsp;·&nbsp; ${email}`;
+  document.getElementById('ban-reason').value = '';
+  showModal('modal-ban');
+}
+
+async function confirmBan() {
+  if (!banTarget) return;
+  const reason = document.getElementById('ban-reason').value.trim();
+  if (!reason) { toast('Please provide a reason for the ban', 'error'); return; }
+  const res = await api.patch(`/admin/users/${banTarget.userId}/ban`, { reason });
+  toast(res && res.ok ? `${banTarget.username} has been banned.` : `${banTarget.username} banned (demo mode).`, 'info');
+  closeModal('modal-ban');
+  banTarget = null;
+  loadUsers();
+}
+</script>
+</body>
+</html>

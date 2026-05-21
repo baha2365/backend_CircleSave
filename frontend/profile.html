@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app-layout">
+  <div id="main">
+    <div id="page" class="page-fade">
+
+      <!-- Profile Header -->
+      <div class="profile-header">
+        <div class="profile-ava" id="profile-ava">?</div>
+        <div class="profile-info">
+          <div class="profile-name" id="profile-name">Loading…</div>
+          <div style="color:var(--text3);font-size:14px;margin-top:4px" id="profile-email"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap" id="profile-badges"></div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto;align-self:flex-start" onclick="scrollToEdit()">Edit profile</button>
+      </div>
+
+      <!-- Top cards grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+        <!-- Trust Score -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Trust Score</div></div>
+          <div id="profile-trust"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
+        </div>
+
+        <!-- Account Info -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Account Info</div></div>
+          <div id="profile-info"><div class="spinner spinner-dark" style="display:block;margin:20px auto"></div></div>
+        </div>
+      </div>
+
+      <!-- Activity stats -->
+      <div class="stats-grid" id="profile-stats" style="margin-bottom:28px"></div>
+
+      <!-- Edit form -->
+      <div class="card" id="edit-section">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Edit Profile</div>
+            <div class="card-subtitle">Update your display name, phone, and avatar</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="edit-username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" class="form-input" id="edit-phone" placeholder="+77001234567">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avatar URL</label>
+          <input type="url" class="form-input" id="edit-avatar" placeholder="https://example.com/avatar.jpg">
+          <div class="form-hint">Public URL to your profile photo</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="handleUpdateProfile()">Save changes</button>
+          <button class="btn btn-secondary" onclick="loadProfile()">Discard</button>
+        </div>
+      </div>
+
+      <!-- Change password -->
+      <div class="card" style="margin-top:24px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Change Password</div>
+            <div class="card-subtitle">Update your account password</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Current password</label>
+          <input type="password" class="form-input" id="pw-current" placeholder="Your current password">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">New password</label>
+            <input type="password" class="form-input" id="pw-new" placeholder="8+ chars">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm new password</label>
+            <input type="password" class="form-input" id="pw-confirm" placeholder="Same as above">
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="handleChangePassword()">Update password</button>
+      </div>
+
+      <!-- Trust History -->
+      <div style="margin-top:28px">
+        <div class="section-header">
+          <h2 class="section-title">Trust Score History</h2>
+        </div>
+        <div id="trust-history">
+          <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="card" style="margin-top:28px;border-color:var(--red-l)">
+        <div class="card-header">
+          <div>
+            <div class="card-title" style="color:var(--red)">Danger Zone</div>
+            <div class="card-subtitle">These actions are permanent and cannot be undone</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="handleDeleteAccount()">Delete my account</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/app-shell.js"></script>
+<script>
+// ── Boot ───────────────────────────────────────────────
+const pageUser = initShell({ title: 'Profile' });
+if (pageUser) loadProfile();
+
+// ── Load ───────────────────────────────────────────────
+async function loadProfile() {
+  let user = pageUser;
+  const res = await api.get('/users/me');
+  if (res && res.ok && res.data.data) user = res.data.data.user || user;
+
+  const score    = user.trustScore || 87;
+  const tier     = user.trustTier  || getTrustTier(score);
+  const initials = (user.username  || user.email || '?').slice(0, 2).toUpperCase();
+
+  // Header
+  document.getElementById('profile-ava').textContent   = initials;
+  document.getElementById('profile-name').textContent  = user.username || 'User';
+  document.getElementById('profile-email').textContent = user.email || '';
+  document.getElementById('profile-badges').innerHTML  = `
+    <div class="badge badge-${roleBadge(user.role)}">${user.role}</div>
+    <div class="badge badge-${tierBadge(tier)}">${tier} TRUST</div>`;
+
+  // Activity stats
+  document.getElementById('profile-stats').innerHTML =
+    statCard('Trust Score',   score,                        '#C87D10', 'Tier: ' + tier) +
+    statCard('Member since',  fmtDate(user.createdAt),      '#2A6040', 'Account age') +
+    statCard('Circles',       DEMO.circles.length,          '#C4522A', 'Active memberships') +
+    statCard('Payments made', DEMO.payments.length,         '#1E6090', 'Total contributions');
+
+  // Trust score card
+  const tierColor = score >= 81 ? 'var(--green)' : score >= 61 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('profile-trust').innerHTML = `
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">
+      <div>
+        <div class="trust-score-big">${score}</div>
+        <div class="trust-tier" style="color:${tierColor}">${tier}</div>
+      </div>
+      <div style="flex:1">
+        <div class="trust-bar" style="height:12px;margin-bottom:6px">
+          <div class="trust-fill" style="width:${score}%"></div>
+        </div>
+        <div style="font-size:12px;color:var(--text3)">Score out of 100 · Updated with each payment</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${[['0–40','POOR','var(--red)'],['41–60','FAIR','var(--amber)'],['61–80','GOOD','var(--amber)'],['81–90','GREAT','var(--green)'],['91–100','EXCELLENT','var(--green)']].map(([range, t, c]) => `
+        <div style="flex:1;min-width:56px;text-align:center;padding:8px 4px;background:${tier===t ? c+'20' : 'var(--bg2)'};border:1px solid ${tier===t ? c : 'var(--border)'};border-radius:var(--r8)">
+          <div style="font-size:10px;font-weight:700;color:${tier===t ? c : 'var(--text3)'}">${t}</div>
+          <div style="font-size:9px;color:var(--text3)">${range}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Account info
+  document.getElementById('profile-info').innerHTML = `
+    <div class="ledger-row"><div style="color:var(--text3);flex:1">Member since</div><div style="font-weight:500">${fmtDate(user.createdAt)}</div></div>
+    <div class="ledger-row"><div style="color:var(--text3);flex:1">Role</div><div class="badge badge-${roleBadge(user.role)}">${user.role}</div></div>
+    <div class="ledger-row"><div style="color:var(--text3);flex:1">Email</div><div style="font-size:13px;font-weight:500;word-break:break-all">${user.email || '—'}</div></div>
+    <div class="ledger-row"><div style="color:var(--text3);flex:1">Phone</div><div style="font-weight:500">${user.phone || '—'}</div></div>
+    <div class="ledger-row" style="border:none"><div style="color:var(--text3);flex:1">User ID</div><div style="font-size:11px;font-family:monospace;color:var(--text3)">${user.id || '—'}</div></div>`;
+
+  // Pre-fill edit form
+  document.getElementById('edit-username').value = user.username  || '';
+  document.getElementById('edit-phone').value    = user.phone     || '';
+  document.getElementById('edit-avatar').value   = user.avatarUrl || '';
+
+  // Load trust history
+  loadTrustHistory();
+}
+
+// ── Trust History ──────────────────────────────────────
+async function loadTrustHistory() {
+  let history = DEMO.trustHistory;
+  const hRes  = await api.get('/users/me/trust-history');
+  if (hRes && hRes.ok && hRes.data.data) history = hRes.data.data;
+
+  const eventLabels = {
+    PAYMENT_ON_TIME:  { label: 'On-time payment',     icon: '✓', color: 'var(--green)' },
+    PAYMENT_LATE:     { label: 'Late payment',         icon: '!', color: 'var(--red)'   },
+    PAYMENT_MISSED:   { label: 'Missed payment',       icon: '✕', color: 'var(--red)'   },
+    CIRCLE_COMPLETED: { label: 'Circle completed',     icon: '🎉', color: 'var(--green)' },
+    MANUAL_ADJUST:    { label: 'Manual adjustment',    icon: '⚙', color: 'var(--amber)' },
+  };
+
+  document.getElementById('trust-history').innerHTML = !history.length
+    ? `<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">No history yet</div><div class="empty-desc">Your trust score changes will be recorded here.</div></div>`
+    : `<div class="card">
+        ${history.map(h => {
+          const ev   = eventLabels[h.eventType] || { label: h.eventType.replace(/_/g,' '), icon: '•', color: 'var(--text3)' };
+          const up   = h.delta > 0;
+          return `
+          <div class="ledger-row">
+            <div style="width:36px;height:36px;border-radius:50%;background:${up ? 'var(--green-l)' : 'var(--red-l)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${up ? 'var(--green)' : 'var(--red)'};flex-shrink:0">
+              ${up ? '+' + h.delta : h.delta}
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:500">${ev.label}</div>
+              <div style="font-size:11px;color:var(--text3)">${fmtDate(h.createdAt)}${h.circleId ? ' · Circle ' + h.circleId : ''}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:var(--ff-d);font-size:18px;font-weight:700;color:var(--text)">${h.scoreAfter}</div>
+              <div style="font-size:11px;color:var(--text3)">score after</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+}
+
+// ── Update profile ─────────────────────────────────────
+async function handleUpdateProfile() {
+  const username  = document.getElementById('edit-username').value.trim();
+  const phone     = document.getElementById('edit-phone').value.trim();
+  const avatarUrl = document.getElementById('edit-avatar').value.trim();
+  if (!username) { toast('Username cannot be empty', 'error'); return; }
+
+  const res = await api.patch('/users/me', { username, phone, avatarUrl });
+  if (res && res.ok && res.data.success) {
+    const updated = res.data.data?.user;
+    if (updated) {
+      currentUser = updated;
+      localStorage.setItem('cs_user', JSON.stringify(updated));
+      updateSidebarUser(updated);
+    }
+    toast('Profile updated!', 'success');
+  } else {
+    toast('Profile updated (demo mode)', 'info');
+  }
+  loadProfile();
+}
+
+// ── Change password ────────────────────────────────────
+async function handleChangePassword() {
+  const current  = document.getElementById('pw-current').value;
+  const newPw    = document.getElementById('pw-new').value;
+  const confirm  = document.getElementById('pw-confirm').value;
+  if (!current || !newPw || !confirm) { toast('Please fill all password fields', 'error'); return; }
+  if (newPw !== confirm)              { toast('New passwords do not match', 'error');        return; }
+  if (newPw.length < 8)              { toast('Password must be at least 8 characters', 'error'); return; }
+
+  const res = await api.patch('/users/me/password', { currentPassword: current, newPassword: newPw });
+  toast(res && res.ok ? 'Password updated!' : 'Password updated (demo mode)', 'success');
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value     = '';
+  document.getElementById('pw-confirm').value = '';
+}
+
+// ── Delete account ─────────────────────────────────────
+async function handleDeleteAccount() {
+  if (!confirm('Are you absolutely sure? This will permanently delete your account and all data.')) return;
+  if (!confirm('This cannot be undone. Type OK to confirm.')) return;
+  const res = await api.delete('/users/me');
+  if (res && res.ok) { toast('Account deleted.', 'info'); setTimeout(logout, 1000); }
+  else toast('This action is disabled in demo mode.', 'info');
+}
+
+// ── Helpers ────────────────────────────────────────────
+function scrollToEdit() {
+  document.getElementById('edit-section').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('edit-username').focus();
+}
+</script>
+</body>
+</html>

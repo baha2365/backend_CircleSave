@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications — CircleSave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app-layout">
+  <div id="main">
+    <div id="page" class="page-fade">
+
+      <div class="section-header">
+        <h2 class="section-title">Notifications</h2>
+        <button class="btn btn-secondary btn-sm" onclick="markAllRead()">Mark all read</button>
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:2px;background:var(--bg2);border-radius:var(--r12);padding:4px;margin-bottom:24px;width:fit-content">
+        <button class="tab-btn active" id="filter-all"    onclick="filterNotifs('all')">All</button>
+        <button class="tab-btn"        id="filter-unread" onclick="filterNotifs('unread')">Unread</button>
+      </div>
+
+      <div id="notifs-list">
+        <div style="text-align:center;padding:40px"><div class="spinner spinner-dark" style="display:inline-block"></div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script src="js/app-shell.js"></script>
+<script>
+// ── Boot ───────────────────────────────────────────────
+const pageUser = initShell({
+  title:      'Notifications',
+  actionHtml: `<button class="btn btn-secondary btn-sm" onclick="markAllRead()">Mark all read</button>`
+});
+if (pageUser) loadNotifications();
+
+// ── State ──────────────────────────────────────────────
+let allNotifs   = [];
+let activeFilter = 'all';
+
+// ── Icons / colours per notification type ──────────────
+function notifIcon(title = '') {
+  const t = title.toLowerCase();
+  if (t.includes('payment') || t.includes('contribution')) return { icon: '💳', bg: 'var(--green-l)',  color: 'var(--green)' };
+  if (t.includes('payout'))                                 return { icon: '💰', bg: 'var(--blue-l)',   color: 'var(--blue)'  };
+  if (t.includes('member')  || t.includes('joined'))        return { icon: '👥', bg: 'var(--accent-l)', color: 'var(--accent)'};
+  if (t.includes('activate'))                               return { icon: '✅', bg: 'var(--green-l)',  color: 'var(--green)' };
+  if (t.includes('swap'))                                   return { icon: '🔄', bg: 'var(--amber-l)',  color: 'var(--amber)' };
+  if (t.includes('late') || t.includes('overdue'))          return { icon: '⚠️', bg: 'var(--red-l)',    color: 'var(--red)'   };
+  return { icon: '🔔', bg: 'var(--bg3)', color: 'var(--text3)' };
+}
+
+// ── Load ───────────────────────────────────────────────
+async function loadNotifications() {
+  const res = await api.get('/users/me/notifications');
+  allNotifs = (res && res.ok && res.data.data) ? res.data.data : DEMO.notifications;
+  renderNotifs();
+}
+
+// ── Render ─────────────────────────────────────────────
+function renderNotifs() {
+  const list = activeFilter === 'unread' ? allNotifs.filter(n => !n.read) : allNotifs;
+  const hasUnread = allNotifs.some(n => !n.read);
+
+  // Update sidebar badge
+  const badge = document.getElementById('notif-badge');
+  const dot   = document.getElementById('sidebar-notif-dot');
+  if (badge) badge.style.display = hasUnread ? 'block' : 'none';
+  if (dot)   dot.style.display   = hasUnread ? 'block' : 'none';
+
+  // Update filter tab labels
+  const unreadCount = allNotifs.filter(n => !n.read).length;
+  document.getElementById('filter-unread').textContent =
+    unreadCount > 0 ? `Unread (${unreadCount})` : 'Unread';
+
+  if (!list.length) {
+    document.getElementById('notifs-list').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔔</div>
+        <div class="empty-title">${activeFilter === 'unread' ? 'All caught up!' : 'No notifications yet'}</div>
+        <div class="empty-desc">${activeFilter === 'unread' ? 'You have no unread notifications.' : 'Activity from your circles will appear here.'}</div>
+        ${activeFilter === 'unread' ? `<button class="btn btn-secondary" onclick="filterNotifs('all')">View all notifications</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  document.getElementById('notifs-list').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${list.map(n => {
+        const { icon, bg, color } = notifIcon(n.data?.title);
+        return `
+        <div class="member-row" style="${!n.read ? 'border-left:3px solid var(--accent)' : ''};cursor:pointer" onclick="markRead('${n.id}', this)">
+          <div style="width:42px;height:42px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${icon}</div>
+          <div class="member-info">
+            <div class="member-name" style="${!n.read ? 'color:var(--text)' : ''}">${n.data?.title || 'Notification'}</div>
+            <div class="member-detail" style="margin-top:3px;font-size:13px">${n.data?.body || ''}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px">${fmtDate(n.createdAt)}</div>
+          </div>
+          ${!n.read ? '<div class="badge badge-accent" style="font-size:10px;flex-shrink:0">NEW</div>' : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── Filter ─────────────────────────────────────────────
+function filterNotifs(filter) {
+  activeFilter = filter;
+  document.getElementById('filter-all').classList.toggle('active',    filter === 'all');
+  document.getElementById('filter-unread').classList.toggle('active', filter === 'unread');
+  renderNotifs();
+}
+
+// ── Mark read ──────────────────────────────────────────
+async function markRead(id, el) {
+  const notif = allNotifs.find(n => n.id === id);
+  if (!notif || notif.read) return;
+  notif.read = true;
+  await api.patch(`/users/me/notifications/${id}/read`).catch(() => {});
+  renderNotifs();
+}
+
+async function markAllRead() {
+  allNotifs.forEach(n => n.read = true);
+  await api.patch('/users/me/notifications/read-all').catch(() => {});
+  toast('All notifications marked as read', 'success');
+  renderNotifs();
+}
+</script>
+</body>
+</html>
