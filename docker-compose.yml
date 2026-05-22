@@ -3,18 +3,11 @@ version: '3.9'
 services:
   frontend:
     build: ./frontend
-    container_name: circlesave-frontend
-    ports:
-      - "80:80"
     depends_on:
       - backend
 
   backend:
     build: .
-    container_name: circlesave-backend
-    ports:
-      - "3000:3000"
-      - "5555:5555"
     depends_on:
       postgres:
         condition: service_healthy
@@ -23,32 +16,24 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:123@postgres:5432/CircleSave
       REDIS_URL: redis://redis:6379
-      NODE_ENV: development
-      PORT: 3000
+      NODE_ENV: production
       JWT_ACCESS_SECRET: super_secret_access_key_very_long_123456
       JWT_REFRESH_SECRET: super_secret_refresh_key_very_long_654321
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       API_VERSION: v1
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://127.0.0.1:5500,http://localhost,http://localhost:80,http://127.0.0.1:80
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && node src/server.js"
+      CORS_ORIGINS: https://yourdomain.com  # ← update with your real domain
+    command: sh -c "npx prisma migrate deploy && node src/server.js"
 
   postgres:
     image: postgres:16
-    container_name: circlesave-db
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123
       POSTGRES_DB: CircleSave
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d CircleSave"]
       interval: 10s
@@ -57,9 +42,6 @@ services:
 
   redis:
     image: redis:7
-    container_name: circlesave-redis
-    ports:
-      - "6379:6379"
     restart: always
 
 volumes:
