@@ -58,6 +58,8 @@ services:
   redis:
     image: redis:7
     container_name: circlesave-redis
+    ports:
+      - "6379:6379"
     restart: always
 
 volumes:
