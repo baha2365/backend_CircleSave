@@ -553,18 +553,35 @@ function swapCard(sw) {
 async function renderMembers() {
   setLoading('tab-members');
 
-  // Re-fetch circle to get latest member list
   const res = await api.get(`/circles/${circleId}`);
+
   if (!res || !res.ok) {
-    showTabError('tab-members', res?.data?.error?.message || 'Failed to load members.');
+    // API failed — fall back to boot-time data if we have it
+    if (membersData.length) {
+      renderMembersList(membersData);
+    } else {
+      showTabError('tab-members', res?.data?.error?.message || 'Failed to load members.');
+    }
     return;
   }
 
-  const raw     = res.data.data;
-  const members = raw.members || raw.circle?.members || [];
-  membersData   = members;
+  // Unwrap members from every possible nesting the API might use:
+  //   res.data.data.members          (flat list at top level)
+  //   res.data.data.circle.members   (nested under circle key)
+  //   res.data.data (array itself)   (data IS the array)
+  const raw = res.data.data;
+  let members =
+    (Array.isArray(raw?.members)         ? raw.members         : null) ||
+    (Array.isArray(raw?.circle?.members) ? raw.circle.members  : null) ||
+    (Array.isArray(raw)                  ? raw                 : null) ||
+    membersData; // fallback: whatever we stored at boot
 
-  if (!members.length) {
+  membersData = members;
+  renderMembersList(members);
+}
+
+function renderMembersList(members) {
+  if (!members || !members.length) {
     document.getElementById('tab-members').innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">👥</div>
@@ -575,8 +592,10 @@ async function renderMembers() {
   }
 
   const isOrg = pageUser.role === 'ORGANIZER' || pageUser.role === 'ADMIN';
-  const pending = members.filter(m => m.status === 'PENDING');
-  const approved = members.filter(m => m.status === 'APPROVED');
+
+  // Accept both APPROVED and ACTIVE as "approved" — APIs differ
+  const pending  = members.filter(m => m.status === 'PENDING');
+  const approved = members.filter(m => m.status === 'APPROVED' || m.status === 'ACTIVE' || !m.status);
 
   let html = '';
 
@@ -584,7 +603,10 @@ async function renderMembers() {
     html += `
       <div style="margin-bottom:20px">
         <div class="section-header">
-          <div class="section-title" style="font-size:16px">Pending Approval <span class="badge badge-amber" style="margin-left:8px">${pending.length}</span></div>
+          <div class="section-title" style="font-size:16px">
+            Pending Approval
+            <span class="badge badge-amber" style="margin-left:8px">${pending.length}</span>
+          </div>
         </div>
         <div class="members-list">${pending.map(m => memberRow(m, isOrg)).join('')}</div>
       </div>`;
@@ -593,9 +615,17 @@ async function renderMembers() {
   html += `
     <div>
       <div class="section-header">
-        <div class="section-title" style="font-size:16px">Members <span style="color:var(--text3);font-size:14px;font-weight:400">(${approved.length})</span></div>
+        <div class="section-title" style="font-size:16px">
+          Members
+          <span style="color:var(--text3);font-size:14px;font-weight:400"> (${approved.length})</span>
+        </div>
       </div>
-      <div class="members-list">${approved.map(m => memberRow(m, isOrg)).join('')}</div>
+      <div class="members-list">
+        ${approved.length
+          ? approved.map(m => memberRow(m, isOrg)).join('')
+          : `<div style="padding:20px;text-align:center;color:var(--text3);font-size:14px">No approved members yet.</div>`
+        }
+      </div>
     </div>`;
 
   document.getElementById('tab-members').innerHTML = html;
